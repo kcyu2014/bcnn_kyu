@@ -1,0 +1,681 @@
+function [bcnn_net, info] = bcnn_train_dropout_v2(bcnn_net, encoder, im, imdb, varargin)
+% CNN_TRAIN   Demonstrates training a CNN
+%    CNN_TRAIN() is an example learner implementing stochastic gradient
+%    descent with momentum to train a CNN for image classification.
+%    It can be used with different datasets by providing a suitable
+%    getBatch function.
+
+opts.train = [] ;
+opts.val = [] ;
+opts.numEpochs = 300 ;
+opts.batchSize = 256 ;
+opts.useGpu = false ;
+opts.learningRate = 0.0001 ;
+opts.continue = false ;
+opts.expDir = fullfile('data','exp') ;
+opts.conserveMemory = false ;
+opts.sync = true ;
+opts.prefetch = false ;
+opts.weightDecay = 0.0005 ;
+opts.momentum = 0.9 ;
+opts.errorType = 'multiclass' ;
+opts.plotDiagnostics = false ;
+opts.layera = 14;
+opts.layerb = 14;
+
+opts.drop_rate = 0.2;
+
+opts = vl_argparse(opts, varargin) ;
+
+if ~exist(opts.expDir, 'dir'), mkdir(opts.expDir) ; end
+if isempty(opts.train), opts.train = find(imdb.images.set==1) ; end
+if isempty(opts.val), opts.val = find(imdb.images.set==2) ; end
+if isnan(opts.train), opts.train = [] ; end
+
+% -------------------------------------------------------------------------
+%                                                    Network initialization
+% -------------------------------------------------------------------------
+neta = bcnn_net.neta;
+
+for i=1:numel(neta.layers)
+  if ~strcmp(neta.layers{i}.type,'conv'), continue; end
+  neta.layers{i}.filtersMomentum = zeros(size(neta.layers{i}.filters), ...
+    class(neta.layers{i}.filters)) ;
+  neta.layers{i}.biasesMomentum = zeros(size(neta.layers{i}.biases), ...
+    class(neta.layers{i}.biases)) ; 
+  if ~isfield(neta.layers{i}, 'filtersLearningRate')
+    neta.layers{i}.filtersLearningRate = 1 ;
+  end
+  if ~isfield(neta.layers{i}, 'biasesLearningRate')
+    neta.layers{i}.biasesLearningRate = 1 ;
+  end
+  if ~isfield(neta.layers{i}, 'filtersWeightDecay')
+    neta.layers{i}.filtersWeightDecay = 1 ;
+  end
+  if ~isfield(neta.layers{i}, 'biasesWeightDecay')
+    neta.layers{i}.biasesWeightDecay = 1 ;
+  end
+end
+
+netb = bcnn_net.netb;
+for i=1:numel(netb.layers)
+  if ~strcmp(netb.layers{i}.type,'conv'), continue; end
+  netb.layers{i}.filtersMomentum = zeros(size(netb.layers{i}.filters), ...
+    class(netb.layers{i}.filters)) ;
+  netb.layers{i}.biasesMomentum = zeros(size(netb.layers{i}.biases), ...
+    class(netb.layers{i}.biases)) ; 
+  if ~isfield(netb.layers{i}, 'filtersLearningRate')
+    netb.layers{i}.filtersLearningRate = 1 ;
+  end
+  if ~isfield(netb.layers{i}, 'biasesLearningRate')
+    netb.layers{i}.biasesLearningRate = 1 ;
+  end
+  if ~isfield(netb.layers{i}, 'filtersWeightDecay')
+    netb.layers{i}.filtersWeightDecay = 1 ;
+  end
+  if ~isfield(netb.layers{i}, 'biasesWeightDecay')
+    netb.layers{i}.biasesWeightDecay = 1 ;
+  end
+end
+
+netc = bcnn_net.netc;
+for i=1:numel(netc.layers)
+  if ~strcmp(netc.layers{i}.type,'conv'), continue; end
+  netc.layers{i}.filtersMomentum = zeros(size(netc.layers{i}.filters), ...
+    class(netc.layers{i}.filters)) ;
+  netc.layers{i}.biasesMomentum = zeros(size(netc.layers{i}.biases), ...
+    class(netc.layers{i}.biases)) ; 
+  if ~isfield(netc.layers{i}, 'filtersLearningRate')
+    netc.layers{i}.filtersLearningRate = 1 ;
+  end
+  if ~isfield(netc.layers{i}, 'biasesLearningRate')
+    netc.layers{i}.biasesLearningRate = 1 ;
+  end
+  if ~isfield(netc.layers{i}, 'filtersWeightDecay')
+    netc.layers{i}.filtersWeightDecay = 1 ;
+  end
+  if ~isfield(netc.layers{i}, 'biasesWeightDecay')
+    netc.layers{i}.biasesWeightDecay = 1 ;
+  end
+end
+
+
+
+if opts.useGpu
+  neta = vl_simplenn_move(neta, 'gpu') ;
+  for i=1:numel(neta.layers)
+    if ~strcmp(neta.layers{i}.type,'conv'), continue; end
+    neta.layers{i}.filtersMomentum = gpuArray(neta.layers{i}.filtersMomentum) ;
+    neta.layers{i}.biasesMomentum = gpuArray(neta.layers{i}.biasesMomentum) ;
+  end
+  
+  
+  netb = vl_simplenn_move(netb, 'gpu') ;
+  for i=1:numel(netb.layers)
+    if ~strcmp(netb.layers{i}.type,'conv'), continue; end
+    netb.layers{i}.filtersMomentum = gpuArray(netb.layers{i}.filtersMomentum) ;
+    netb.layers{i}.biasesMomentum = gpuArray(netb.layers{i}.biasesMomentum) ;
+  end
+  
+  
+  netc = vl_simplenn_move(netc, 'gpu') ;
+  for i=1:numel(netc.layers)
+    if ~strcmp(netc.layers{i}.type,'conv'), continue; end
+    netc.layers{i}.filtersMomentum = gpuArray(netc.layers{i}.filtersMomentum) ;
+    netc.layers{i}.biasesMomentum = gpuArray(netc.layers{i}.biasesMomentum) ;
+  end
+else
+  neta = vl_simplenn_move(neta, 'cpu') ;
+  for i=1:numel(neta.layers)
+    if ~strcmp(neta.layers{i}.type,'conv'), continue; end
+    neta.layers{i}.filtersMomentum = gather(neta.layers{i}.filtersMomentum) ;
+    neta.layers{i}.biasesMomentum = gather(neta.layers{i}.biasesMomentum) ;
+  end
+  
+  
+  netb = vl_simplenn_move(netb, 'cpu') ;
+  for i=1:numel(netb.layers)
+    if ~strcmp(netb.layers{i}.type,'conv'), continue; end
+    netb.layers{i}.filtersMomentum = gather(netb.layers{i}.filtersMomentum) ;
+    netb.layers{i}.biasesMomentum = gather(netb.layers{i}.biasesMomentum) ;
+  end
+  
+  
+  netc = vl_simplenn_move(netc, 'cpu') ;
+  for i=1:numel(netc.layers)
+    if ~strcmp(netc.layers{i}.type,'conv'), continue; end
+    netc.layers{i}.filtersMomentum = gather(netc.layers{i}.filtersMomentum) ;
+    netc.layers{i}.biasesMomentum = gather(netc.layers{i}.biasesMomentum) ;
+  end
+    
+end
+
+% -------------------------------------------------------------------------
+%                                                        Train and validate
+% -------------------------------------------------------------------------
+
+rng(0) ;
+
+if opts.useGpu
+  one = gpuArray(single(1)) ;
+else
+  one = single(1) ;
+end
+
+info.train.objective = [] ;
+info.train.error = [] ;
+info.train.topFiveError = [] ;
+info.train.speed = [] ;
+info.val.objective = [] ;
+info.val.error = [] ;
+info.val.topFiveError = [] ;
+info.val.speed = [] ;
+
+lr = 0 ;
+resa = [] ;
+resb = [] ;
+resc = [] ;
+for epoch=1:opts.numEpochs
+  prevLr = lr ;
+  lr = opts.learningRate(min(epoch, numel(opts.learningRate))) ;
+
+  % fast-forward to where we stopped
+  modelPath = @(ep) fullfile(opts.expDir, sprintf('net-epoch-%d.mat', ep));
+  modelFigPath = fullfile(opts.expDir, 'net-train.pdf') ;
+  if opts.continue
+    if exist(modelPath(epoch),'file'), continue ; end
+    if epoch > 1
+      fprintf('resuming by loading epoch %d\n', epoch-1) ;
+      load(modelPath(epoch-1), 'neta', 'netb', 'netc', 'info') ;
+    end
+  end
+
+  train = opts.train(randperm(numel(opts.train))) ;
+  val = opts.val ;
+
+  info.train.objective(end+1) = 0 ;
+  info.train.error(end+1) = 0 ;
+  info.train.topFiveError(end+1) = 0 ;
+  info.train.speed(end+1) = 0 ;
+  info.val.objective(end+1) = 0 ;
+  info.val.error(end+1) = 0 ;
+  info.val.topFiveError(end+1) = 0 ;
+  info.val.speed(end+1) = 0 ;
+
+  % reset momentum if needed
+  if prevLr ~= lr
+    fprintf('learning rate changed (%f --> %f): resetting momentum\n', prevLr, lr) ;
+    for l=1:numel(neta.layers)
+      if ~strcmp(neta.layers{l}.type, 'conv'), continue ; end
+      neta.layers{l}.filtersMomentum = 0 * neta.layers{l}.filtersMomentum ;
+      neta.layers{l}.biasesMomentum = 0 * neta.layers{l}.biasesMomentum ;
+    end
+    
+    for l=1:numel(netb.layers)
+      if ~strcmp(netb.layers{l}.type, 'conv'), continue ; end
+      netb.layers{l}.filtersMomentum = 0 * netb.layers{l}.filtersMomentum ;
+      netb.layers{l}.biasesMomentum = 0 * netb.layers{l}.biasesMomentum ;
+    end
+    
+    for l=1:numel(netc.layers)
+      if ~strcmp(netc.layers{l}.type, 'conv'), continue ; end
+      netc.layers{l}.filtersMomentum = 0 * netc.layers{l}.filtersMomentum ;
+      netc.layers{l}.biasesMomentum = 0 * netc.layers{l}.biasesMomentum ;
+    end
+  end
+
+  for t=1:opts.batchSize:numel(train)
+    % get next image batch and labels
+    batch = train(t:min(t+opts.batchSize-1, numel(train))) ;
+    batch_time = tic ;
+    fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
+            fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
+    
+    labels = imdb.images.label(batch);
+    
+    if(exist('dA', 'var'))
+        clear dA dB dEdpsi psi_n ima imb resa resb resc
+        wait(gpuDevice);
+%         resa = [];
+%         resb = [];
+        resc = [];
+    end
+    
+    [psi, ima, imb, resa, resb, dropA, dropB] = get_bcnn_features_onescale_batch_dropoutv2(neta, netb, im(batch), ...
+        'regionBorder', encoder.regionBorder, ...
+        'normalization', 'none', 'drop_rate', opts.drop_rate);
+    
+    psi = cat(2, psi{:});
+    
+ 
+    
+    if opts.useGpu
+        A = gather(resa(end).x);
+        B = gather(resb(end).x);
+        
+        ima = gpuArray(ima) ;
+        imb = gpuArray(imb) ;
+    else
+        A = resa(end).x;
+        B = resb(end).x;
+    end
+    
+    
+   
+    psi_sqrt = sign(psi).*sqrt(abs(psi));
+    psi_sqrt_norm = arrayfun(@(x) norm(psi_sqrt(:,x)), 1:size(psi_sqrt,2));
+    
+    % derivatives of taking sqrt root and L2 normalization
+    
+    psi_n = bsxfun(@rdivide, psi_sqrt, psi_sqrt_norm);
+    
+%     d_psi = size(psi_n, 1);
+    psi_n = reshape(psi_n, [1,1,size(psi_n,1),size(psi_n,2)]);
+    
+    if opts.useGpu
+      psi_n = gpuArray(psi_n) ;
+%       dropMask = gpuArray(dropMask);
+    end
+    
+    
+    netc.layers{end}.class = labels ;
+    
+    resc = vl_simplenn_v2(netc, psi_n, 1, resc, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync) ;
+  
+    dEdpsi = compute_deriv_resp_bcnnf(squeeze(resc(1).dzdx), psi_sqrt, psi_sqrt_norm, psi);
+    %{
+    dEdpsi = dEdpsi.*dropMask;
+    
+    clear dropMask
+    %}
+    dEdpsi = reshape(dEdpsi, size(A,3), size(B,3), size(A,4));
+    scale = single(1 / ((1 - opts.drop_rate)^2));
+    for ii=1:size(dropA,2)
+        dEdpsi(dropA(:,ii),:,ii) = 0;
+        dEdpsi(:,dropB(:,ii),ii) = 0;
+    end
+    dEdpsi = scale.*dEdpsi;
+    [dA, dB] = arrayfun(@(x) compute_deriv_resp_AB(dEdpsi(:,:,x), A(:,:,:,x), B(:,:,:,x), opts.useGpu), 1:size(dEdpsi, 3), 'UniformOutput', false);
+    dA = cat(4, dA{:});
+    dB = cat(4, dB{:});
+%     for ii=1:size(dropA,2)
+%         dA(:,:,dropA(:,ii),ii) = 0;
+%         dB(:,:,dropB(:,ii),ii) = 0;
+%     end
+%     scale = single(1 / ((1 - opts.drop_rate)^2));
+%     dA = scale.*dA;
+%     dB = scale.*dB;
+    
+  
+%       dA = gpuArray(zeros(size(A), 'single'));
+%       dB = gpuArray(zeros(size(B), 'single'));
+    % backprop
+    resa = vl_simplenn_v2(neta, ima, dA, resa, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync, 'doforward', false) ;
+  
+  
+    resb = vl_simplenn_v2(netb, imb, dB, resb, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync, 'doforward', false) ;
+  
+    % gradient step
+    for l=1:numel(neta.layers)
+      if ~strcmp(neta.layers{l}.type, 'conv'), continue ; end
+
+      neta.layers{l}.filtersMomentum = ...
+        opts.momentum * neta.layers{l}.filtersMomentum ...
+          - (lr * neta.layers{l}.filtersLearningRate) * ...
+          (opts.weightDecay * neta.layers{l}.filtersWeightDecay) * neta.layers{l}.filters ...
+          - (lr * neta.layers{l}.filtersLearningRate) / numel(batch) * resa(l).dzdw{1} ;
+
+      neta.layers{l}.biasesMomentum = ...
+        opts.momentum * neta.layers{l}.biasesMomentum ...
+          - (lr * neta.layers{l}.biasesLearningRate) * ....
+          (opts.weightDecay * neta.layers{l}.biasesWeightDecay) * neta.layers{l}.biases ...
+          - (lr * neta.layers{l}.biasesLearningRate) / numel(batch) * resa(l).dzdw{2} ;
+
+      neta.layers{l}.filters = neta.layers{l}.filters + neta.layers{l}.filtersMomentum ;
+      neta.layers{l}.biases = neta.layers{l}.biases + neta.layers{l}.biasesMomentum ;
+    end
+    
+    
+    % gradient step
+    for l=1:numel(netb.layers)
+      if ~strcmp(netb.layers{l}.type, 'conv'), continue ; end
+
+      netb.layers{l}.filtersMomentum = ...
+        opts.momentum * netb.layers{l}.filtersMomentum ...
+          - (lr * netb.layers{l}.filtersLearningRate) * ...
+          (opts.weightDecay * netb.layers{l}.filtersWeightDecay) * netb.layers{l}.filters ...
+          - (lr * netb.layers{l}.filtersLearningRate) / numel(batch) * resb(l).dzdw{1} ;
+
+      netb.layers{l}.biasesMomentum = ...
+        opts.momentum * netb.layers{l}.biasesMomentum ...
+          - (lr * netb.layers{l}.biasesLearningRate) * ....
+          (opts.weightDecay * netb.layers{l}.biasesWeightDecay) * netb.layers{l}.biases ...
+          - (lr * netb.layers{l}.biasesLearningRate) / numel(batch) * resb(l).dzdw{2} ;
+
+      netb.layers{l}.filters = netb.layers{l}.filters + netb.layers{l}.filtersMomentum ;
+      netb.layers{l}.biases = netb.layers{l}.biases + netb.layers{l}.biasesMomentum ;
+    end
+    
+    % gradient step
+    for l=1:numel(netc.layers)
+      if ~strcmp(netc.layers{l}.type, 'conv'), continue ; end
+
+      netc.layers{l}.filtersMomentum = ...
+        opts.momentum * netc.layers{l}.filtersMomentum ...
+          - (lr * netc.layers{l}.filtersLearningRate) * ...
+          (opts.weightDecay * netc.layers{l}.filtersWeightDecay) * netc.layers{l}.filters ...
+          - (lr * netc.layers{l}.filtersLearningRate) / numel(batch) * resc(l).dzdw{1} ;
+
+      netc.layers{l}.biasesMomentum = ...
+        opts.momentum * netc.layers{l}.biasesMomentum ...
+          - (lr * netc.layers{l}.biasesLearningRate) * ....
+          (opts.weightDecay * netc.layers{l}.biasesWeightDecay) * netc.layers{l}.biases ...
+          - (lr * netc.layers{l}.biasesLearningRate) / numel(batch) * resc(l).dzdw{2} ;
+
+      netc.layers{l}.filters = netc.layers{l}.filters + netc.layers{l}.filtersMomentum ;
+      netc.layers{l}.biases = netc.layers{l}.biases + netc.layers{l}.biasesMomentum ;
+    end
+
+    % print information
+    batch_time = toc(batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.train = updateError(opts, info.train, netc, resc, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
+    n = t + numel(batch) - 1 ;
+    fprintf(' err %.1f err5 %.1f', ...
+      info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
+    fprintf('\n') ;
+
+    % debug info
+    if opts.plotDiagnostics
+      figure(2) ; vl_simplenn_diagnose(net,res) ; drawnow ;
+    end
+  end % next batch
+
+  % evaluation on validation set
+  for t=1:opts.batchSize:numel(val)
+      
+      
+    batch_time = tic ;
+    batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
+    fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
+            fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
+      
+    
+    labels = imdb.images.label(batch);
+    
+    if(exist('psi_n', 'var'))
+        clear psi_n ima imb resa resb resc
+        wait(gpuDevice);
+%         resa = [];
+%         resb = [];
+        resc = [];
+    end
+    
+    [psi, ima, imb, resa, resb] = get_bcnn_features_onescale_batch(neta, netb, im(batch), ...
+        'regionBorder', encoder.regionBorder, ...
+        'normalization', 'none');
+    
+    psi = cat(2, psi{:});
+    
+    
+    if opts.useGpu
+        A = gather(resa(end).x);
+        B = gather(resb(end).x);
+        ima = gpuArray(ima) ;
+        imb = gpuArray(imb) ;
+    else
+        A = resa(end).x;
+        B = resb(end).x;
+    end
+   
+    psi_sqrt = sign(psi).*sqrt(abs(psi));
+    psi_sqrt_norm = arrayfun(@(x) norm(psi_sqrt(:,x)), 1:size(psi_sqrt,2));
+    
+    % derivatives of taking sqrt root and L2 normalization
+    
+    psi_n = bsxfun(@rdivide, psi_sqrt, psi_sqrt_norm);
+    
+%     d_psi = size(psi_n, 1);
+    psi_n = reshape(psi_n, [1,1,size(psi_n,1),size(psi_n,2)]);
+    
+    if opts.useGpu
+      psi_n = gpuArray(psi_n) ;
+    end
+    
+    
+    netc.layers{end}.class = labels ;
+    
+    resc = vl_simplenn_v2(netc, psi_n, 1, resc, ...
+      'conserveMemory', opts.conserveMemory, ...
+      'sync', opts.sync) ;
+   
+  
+  
+    % print information
+    batch_time = toc(batch_time) ;
+    speed = numel(batch)/batch_time ;
+    info.val = updateError(opts, info.val, netc, resc, batch_time) ;
+
+    fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
+    n = t + numel(batch) - 1 ;
+    fprintf(' err %.1f err5 %.1f', ...
+      info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
+    fprintf('\n') ;
+  end
+
+  % save
+  info.train.objective(end) = info.train.objective(end) / numel(train) ;
+  info.train.error(end) = info.train.error(end) / numel(train)  ;
+  info.train.topFiveError(end) = info.train.topFiveError(end) / numel(train) ;
+  info.train.speed(end) = numel(train) / info.train.speed(end) ;
+  info.val.objective(end) = info.val.objective(end) / numel(val) ;
+  info.val.error(end) = info.val.error(end) / numel(val) ;
+  info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
+  info.val.speed(end) = numel(val) / info.val.speed(end) ;
+  save(modelPath(epoch), 'neta', 'netb', 'netc', 'info') ;
+
+  figure(1) ; clf ;
+  subplot(1,2,1) ;
+  semilogy(1:epoch, info.train.objective, 'k') ; hold on ;
+  semilogy(1:epoch, info.val.objective, 'b') ;
+  xlabel('training epoch') ; ylabel('energy') ;
+  grid on ;
+  h=legend('train', 'val') ;
+  set(h,'color','none');
+  title('objective') ;
+  subplot(1,2,2) ;
+  switch opts.errorType
+    case 'multiclass'
+      plot(1:epoch, info.train.error, 'k') ; hold on ;
+      plot(1:epoch, info.train.topFiveError, 'k--') ;
+      plot(1:epoch, info.val.error, 'b') ;
+      plot(1:epoch, info.val.topFiveError, 'b--') ;
+      h=legend('train','train-5','val','val-5') ;
+    case 'binary'
+      plot(1:epoch, info.train.error, 'k') ; hold on ;
+      plot(1:epoch, info.val.error, 'b') ;
+      h=legend('train','val') ;
+  end
+  grid on ;
+  xlabel('training epoch') ; ylabel('error') ;
+  set(h,'color','none') ;
+  title('error') ;
+  drawnow ;
+  print(1, modelFigPath, '-dpdf') ;
+end
+
+bcnn_net.neta = neta;
+bcnn_net.netb = netb;
+bcnn_net.netc = netc;
+
+% -------------------------------------------------------------------------
+function info = updateError(opts, info, net, res, speed)
+% -------------------------------------------------------------------------
+predictions = gather(res(end-1).x) ;
+sz = size(predictions) ;
+n = prod(sz(1:2)) ;
+
+labels = net.layers{end}.class ;
+info.objective(end) = info.objective(end) + sum(double(gather(res(end).x))) ;
+info.speed(end) = info.speed(end) + speed ;
+switch opts.errorType
+  case 'multiclass'
+    [~,predictions] = sort(predictions, 3, 'descend') ;
+    error = ~bsxfun(@eq, predictions, reshape(labels, 1, 1, 1, [])) ;
+    info.error(end) = info.error(end) +....
+      sum(sum(sum(error(:,:,1,:))))/n ;
+    info.topFiveError(end) = info.topFiveError(end) + ...
+      sum(sum(sum(min(error(:,:,1:5,:),[],3))))/n ;
+  case 'binary'
+    error = bsxfun(@times, predictions, labels) < 0 ;
+    info.error(end) = info.error(end) + sum(error(:))/n ;
+end
+
+
+function psi = bilinear_pool(A, B)
+w1 = size(A,2) ;
+h1 = size(A,1) ;
+w2 = size(B,2) ;
+h2 = size(B,1) ;
+
+%figure(1); clf;
+%montage(reshape(A, [h1 w1 1 size(A,3)]));
+%figure(2); clf;
+%montage(reshape(B, [h2 w2 1 size(B,3)]));
+%pause;
+
+if w1*h1 <= w2*h2,
+    %downsample B
+    B = array_resize(B, w1, h1);
+    A = reshape(A, [w1*h1 size(A,3)]);
+else
+    %downsample A
+    A = array_resize(A, w2, h2);
+    B = reshape(A, [w2*h2 size(B,3)]);
+end
+
+% bilinear pool
+psi = A'*B;
+psi = psi(:);
+
+
+
+
+function Ar = array_resize(A, w, h)
+numChannels = size(A, 3);
+indw = round(linspace(1,size(A,2),w));
+indh = round(linspace(1,size(A,1),h));
+Ar = zeros(w*h, numChannels, 'single');
+for i = 1:numChannels,
+    Ai = A(indh,indw,i);
+    Ar(:,i) = Ai(:);
+end
+
+
+function dEdpsi = compute_deriv_resp_bcnnf(dEdz, psi_sqrt, psi_sqrt_norm, psi)
+
+
+thresh = 10^-8;
+
+C_bar = dEdz.*psi_sqrt;
+C_bar_sum = sum(C_bar, 1);
+C_bar = bsxfun(@plus, -1.*C_bar, C_bar_sum);
+
+yi_2_ynorm = bsxfun(@rdivide, psi_sqrt.^2, psi_sqrt_norm.^3);
+C_i = bsxfun(@plus, -yi_2_ynorm, 1./psi_sqrt_norm);
+psi_einv(1:size(dEdz,1), 1:size(dEdz,2)) = thresh^(-0.5);
+psi_einv(psi>thresh) = psi(psi>thresh).^(-0.5);
+C_i = 0.5.*dEdz.*C_i.*psi_einv;
+
+B_i = (-0.5).*bsxfun(@rdivide, psi_sqrt.*psi_einv, psi_sqrt_norm.^3);
+
+
+dEdpsi = B_i.*C_bar+C_i;
+
+function [dA, dB] = compute_deriv_resp_AB(dEdpsi, A, B, useGpu)
+
+w1 = size(A,2) ;
+h1 = size(A,1) ;
+w2 = size(B,2) ;
+h2 = size(B,1) ;
+
+%% make sure A and B have same aspect ratio
+assert(w1/h1==w2/h2, 'Only support two feature maps have same aspect ration')
+
+
+if w1*h1 <= w2*h2,
+    %downsample B
+    B = array_resize(B, w1, h1);
+    A = reshape(A, [w1*h1 size(A,3)]);
+else
+    %downsample A
+    A = array_resize(A, w2, h2);
+    B = reshape(B, [w2*h2 size(B,3)]);
+end
+
+dA = B*dEdpsi';
+dB = A*dEdpsi;
+
+
+if w1*h1 <= w2*h2,
+    %B is downsampled, upsample dB back to original size
+    dB = reshape(dB, h1, w1, size(dB,2));
+    tempdB = dB;
+    if(useGpu)
+        dB = gpuArray(zeros(h2, w2, size(B,2), 'single'));
+    else
+        dB = zeros(h2, w2, size(B,2), 'single');
+    end
+    
+    indw = round(linspace(1,w2,w1));
+    indh = round(linspace(1,h2,h1));
+    dB(indh, indw, :) = tempdB;
+%     indh = ceil(h1.*[1:h2]./h2);
+%     indw = ceil(w1.*[1:w2]./w2);
+%     dB = dB(indh, indw, :);
+    dA = reshape(dA, h1, w1, size(dA,2));
+else
+    %A is downsampled, upsample dA back to original size
+    dA = reshape(dA, h2, h2, size(dA,2));  
+    tempdA = dA;
+    if(useGpu)
+        dA = gpuArray(zeros(h1, w1, size(A,2), 'single'));
+    else
+        dA = zeros(h1, w1, size(A,2), 'single');
+    end
+    
+    
+    indw = round(linspace(1,w1,w2));
+    indh = round(linspace(1,h1,h2));
+    dA(indh, indw, :) = tempdA;  
+%     indh = ceil(h2.*[1:h1]./h1);
+%     indw = ceil(w2.*[1:w1]./w1);
+%     dA = dA(indh, indw, :);
+%     dA = imresize(dA, s, 'bilinear');
+    dB = reshape(dB, h2, w2, size(dB, 2));
+end
+
+
+%{
+if w1*h1 <= w2*h2,
+    %B is downsampled, upsample dB back to original size
+    dB = reshape(dB, h1, w1, size(dB,2));
+    s = h2/h1;
+    dB = imresize(dB, s);
+    dA = reshape(dA, h1, w1, size(dA,2));
+else
+    %A is downsampled, upsample dA back to original size
+    dA = reshape(dA, h2, h2, size(dA,2));
+    s = h1/h2;
+    dA = imresize(dA, s);
+    dB = reshape(dB, h2, w2, size(dB, 2));
+end
+%}
