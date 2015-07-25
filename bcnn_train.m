@@ -1,4 +1,4 @@
-function [bcnn_net, info] = bcnn_train(bcnn_net, encoder, getBatch, imdb, varargin)
+function [bcnn_net, info] = bcnn_train(bcnn_net, getBatch, imdb, varargin)
 % function [bcnn_net, info] = bcnn_train(bcnn_net, encoder, im, imdb, varargin)
 % CNN_TRAIN   Demonstrates training a CNN
 %    CNN_TRAIN() is an example learner implementing stochastic gradient
@@ -23,6 +23,7 @@ opts.errorType = 'multiclass' ;
 opts.plotDiagnostics = false ;
 opts.layera = 14;
 opts.layerb = 14;
+opts.regionBorder = 0.05;
 
 opts = vl_argparse(opts, varargin) ;
 
@@ -104,6 +105,7 @@ end
 % -------------------------------------------------------------------------
 
 if opts.useGpu
+  neta.useGpu = true;
   neta = vl_simplenn_move(neta, 'gpu') ;
   for i=1:numel(neta.layers)
     if ~strcmp(neta.layers{i}.type,'conv'), continue; end
@@ -111,7 +113,7 @@ if opts.useGpu
     neta.layers{i}.biasesMomentum = gpuArray(neta.layers{i}.biasesMomentum) ;
   end
   
-  
+  netb.useGpu = true;
   netb = vl_simplenn_move(netb, 'gpu') ;
   for i=1:numel(netb.layers)
     if ~strcmp(netb.layers{i}.type,'conv'), continue; end
@@ -119,7 +121,7 @@ if opts.useGpu
     netb.layers{i}.biasesMomentum = gpuArray(netb.layers{i}.biasesMomentum) ;
   end
   
-  
+  netc.useGpu = true;
   netc = vl_simplenn_move(netc, 'gpu') ;
   for i=1:numel(netc.layers)
     if ~strcmp(netc.layers{i}.type,'conv'), continue; end
@@ -127,6 +129,7 @@ if opts.useGpu
     netc.layers{i}.biasesMomentum = gpuArray(netc.layers{i}.biasesMomentum) ;
   end
 else
+  neta.useGpu = false;
   neta = vl_simplenn_move(neta, 'cpu') ;
   for i=1:numel(neta.layers)
     if ~strcmp(neta.layers{i}.type,'conv'), continue; end
@@ -134,7 +137,7 @@ else
     neta.layers{i}.biasesMomentum = gather(neta.layers{i}.biasesMomentum) ;
   end
   
-  
+  netb.useGpu = false;
   netb = vl_simplenn_move(netb, 'cpu') ;
   for i=1:numel(netb.layers)
     if ~strcmp(netb.layers{i}.type,'conv'), continue; end
@@ -142,7 +145,7 @@ else
     netb.layers{i}.biasesMomentum = gather(netb.layers{i}.biasesMomentum) ;
   end
   
-  
+  netc.useGpu = false;
   netc = vl_simplenn_move(netc, 'cpu') ;
   for i=1:numel(netc.layers)
     if ~strcmp(netc.layers{i}.type,'conv'), continue; end
@@ -246,7 +249,7 @@ for epoch=1:opts.numEpochs
     end
     
     [psi, ~, ~, resa, resb] = get_bcnn_features_onescale_batch(neta, netb, im, ...
-        'regionBorder', encoder.regionBorder, ...
+        'regionBorder', opts.regionBorder, ...
         'normalization', 'none', 'networkconservmemory', false);
 
 
@@ -283,35 +286,6 @@ for epoch=1:opts.numEpochs
     dB = cat(4, dB{:});
 
 
-
-   %{
-    psi_sqrt = sign(psi).*sqrt(abs(psi));
-    psi_sqrt_norm = arrayfun(@(x) norm(psi_sqrt(:,x)), 1:size(psi_sqrt,2));
-    
-    % derivatives of taking sqrt root and L2 normalization
-    
-    psi_n = bsxfun(@rdivide, psi_sqrt, psi_sqrt_norm);
-    
-    psi_n = reshape(psi_n, [1,1,size(psi_n,1),size(psi_n,2)]);
-    
-    if opts.useGpu
-      psi_n = gpuArray(psi_n) ;
-    end
-    
-    
-    netc.layers{end}.class = labels ;
-    
-    resc = vl_simplenn_v2(netc, psi_n, 1, resc, ...
-      'conserveMemory', opts.conserveMemory, ...
-      'sync', opts.sync) ;
-  
-    dEdpsi = compute_deriv_resp_bcnnf(squeeze(resc(1).dzdx), psi_sqrt, psi_sqrt_norm, psi);
-    dEdpsi = reshape(dEdpsi, size(A,3), size(B,3), size(A,4));
-    [dA, dB] = arrayfun(@(x) compute_deriv_resp_AB(dEdpsi(:,:,x), A(:,:,:,x), B(:,:,:,x), opts.useGpu), 1:size(dEdpsi, 3), 'UniformOutput', false);
-    dA = cat(4, dA{:});
-    dB = cat(4, dB{:});
-    
-  %}
 
     % backprop
     resa = vl_bilinearnn(neta, [], dA, resa, ...
@@ -423,8 +397,7 @@ for epoch=1:opts.numEpochs
     end
     
     [psi, ~, ~, ~, ~] = get_bcnn_features_onescale_batch(neta, netb, im, ...
-        'regionBorder', encoder.regionBorder, ...
-        'normalization', 'none');
+        'regionBorder', opts.regionBorder, 'normalization', 'none');
     
     psi = cat(2, psi{:});
     
@@ -436,10 +409,6 @@ for epoch=1:opts.numEpochs
     
     
     netc.layers{end}.class = labels ;
-    
-%     resc = vl_bilinearnn(netc, psi, 1, resc, ...
-%       'conserveMemory', opts.conserveMemory, ...
-%       'sync', opts.sync) ;
     
     resc = vl_bilinearnn(netc, psi, [], resc, ...
       'conserveMemory', opts.conserveMemory, ...

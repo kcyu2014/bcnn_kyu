@@ -8,7 +8,6 @@ opts.train.numEpochs = 45 ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.prefetch = false ;
-%opts.train.learningRate = [0.001*ones(1, 10) 0.0001*ones(1, 10) 0.00001*ones(1,10)] ;
 opts.train.learningRate = [0.001*ones(1, 10) 0.001*ones(1, 10) 0.001*ones(1,10)] ;
 opts.train.expDir = opts.expDir ;
 opts = vl_argparse(opts, varargin) ;
@@ -18,49 +17,12 @@ if(opts.useGpu)
     opts.train.useGpu = opts.useGpu;
 end
 
-encoderOpts.type = 'bcnn';
-encoderOpts.modela = [];
-encoderOpts.layera = 14;
-encoderOpts.modelb = [];
-encoderOpts.layerb = 14;
-encoderOpts = vl_argparse(encoderOpts, opts.encoders{1}.opts);
-
-encoder.neta = load(encoderOpts.modela);
-encoder.neta.layers = encoder.neta.layers(1:encoderOpts.layera);
-encoder.netb = load(encoderOpts.modelb);
-encoder.netb.layers = encoder.netb.layers(1:encoderOpts.layerb);
-encoder.regionBorder = 0.05;
-encoder.type = 'bcnn';
-encoder.normalization = 'sqrt_L2';
 
 
-if opts.useGpu
-    encoder.neta = vl_simplenn_move(encoder.neta, 'gpu') ;
-    encoder.netb = vl_simplenn_move(encoder.netb, 'gpu') ;
-    encoder.neta.useGpu = true ;
-    encoder.netb.useGpu = true ;
-else
-    encoder.neta = vl_simplenn_move(encoder.neta, 'cpu') ;
-    encoder.netb = vl_simplenn_move(encoder.netb, 'cpu') ;
-    encoder.neta.useGpu = false ;
-    encoder.netb.useGpu = false ;
-end
-
-
-bcnn_net = initializeNetwork(imdb, encoder, opts) ;
+bcnn_net = initializeNetwork(imdb, opts) ;
 fn = getBatchWrapper(bcnn_net.neta.normalization, opts.numFetchThreads) ;
-% [bcnn_net,info] = bcnn_train(bcnn_net, imdb, fna, fnb, opts.inittrain, 'batchSize', opts.batchSize, 'conserveMemory', true) ;
 
-%{
-im = cell(numel(imdb.images.label),1);
-for i=1:numel(im)
-    fprintf('reading image %d.\n', i);
-    im{i} = imread(fullfile(imdb.imageDir, imdb.images.name{i}));
-    if size(im{i}, 3) == 1, im{i} = repmat(im{i}, [1 1 3]); end; %grayscale image
-end
-%}
-
-[bcnn_net,info] = bcnn_train(bcnn_net, encoder, fn, imdb, opts.train, 'batchSize', opts.batchSize, 'conserveMemory', true) ;
+[bcnn_net,info] = bcnn_train(bcnn_net, fn, imdb, opts.train, 'batchSize', opts.batchSize, 'conserveMemory', true) ;
 
 
 if(~exist(fullfile(opts.expDir, 'fine-tuned-model'), 'dir'))
@@ -112,12 +74,30 @@ labels = imdb.images.label(batch) ;
 
 
 
-function net = initializeNetwork(imdb, encoder, opts)
+function net = initializeNetwork(imdb, opts)
 % -------------------------------------------------------------------------
 
+
+if (~isempty(opts.modela)&& ~isempty(opts.modelb) && ~opts.shareparameters)
+
 % set the two networks
-net.neta = encoder.neta;
-net.netb = encoder.netb;
+% net.neta = encoder.neta;
+% net.netb = encoder.netb;
+
+encoderOpts.type = 'bcnn';
+encoderOpts.modela = [];
+encoderOpts.layera = 14;
+encoderOpts.modelb = [];
+encoderOpts.layerb = 14;
+
+encoderOpts = vl_argparse(encoderOpts, opts.encoders{1}.opts);
+
+net.neta = load(encoderOpts.modela); % Load model if specified
+net.netb = load(encoderOpts.modelb); % Load model if specified
+ 
+net.neta.layers = net.neta.layers(1:encoderOpts.layera);
+net.netb.layers = net.netb.layers(1:encoderOpts.layerb);
+
 
 numClass = length(imdb.classes.name);
 
@@ -169,4 +149,4 @@ netc.layers{end+1} = struct('type', 'conv', ...
 netc.layers{end+1} = struct('type', 'softmaxloss') ;
 net.netc = netc;
 
-
+end
