@@ -382,7 +382,7 @@ for epoch=1:opts.numEpochs
     batch_time = tic ;
     batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
-            fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
+            fix((t-1)/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
       
     [im, labels] = getBatch(imdb, batch) ;
     if opts.prefetch

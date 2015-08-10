@@ -14,7 +14,8 @@ opts = vl_argparse(opts, varargin);
 
 % fetch is true if images is a list of filenames (instead of
 % a cell array of images)
-fetch = numel(images) > 1 && ischar(images{1}) ;
+% fetch = numel(images) > 1 && ischar(images{1}) ;
+fetch = ischar(images{1}) ;
 
 % prefetch is used to load images in a separate thread
 prefetch = fetch & opts.prefetch ;

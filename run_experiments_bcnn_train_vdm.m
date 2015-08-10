@@ -36,7 +36,7 @@ function run_experiments_bcnn_train_vdm()
     
   setupNameList = {'bcnnvdm'};
   encoderList = {{bcnnvdm}}; 
-  datasetList = {{'cars', 1}};  
+  datasetList = {{'cub', 1}};  
 
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
@@ -51,7 +51,7 @@ function run_experiments_bcnn_train_vdm()
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'bcnn-train_vdm_validation', ...
+			  'prefix', 'bcnn-train-vdm-dev', ...
 			  'batchSize', 1, ...
 			  'useGpu', true);
           imdb_bcnn_train(imdb, opts);

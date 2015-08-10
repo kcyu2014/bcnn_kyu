@@ -122,6 +122,8 @@ else % classification task
     b = {} ;
     
     for c=1:numel(info.classes)
+      fprintf('\n-------------------------------------- ');
+      fprintf('OVA-classifier: class: %d\n', c) ;
       if ~multiLabel
         y = 2*(imdb.images.label == info.classes(c)) - 1 ;
       else
@@ -300,7 +302,7 @@ opts.whiteningRegul = 0 ;
 opts.renormalize = false ;
 opts.numWords = 64 ;
 opts.numSpatialSubdivisions = 1 ;
-opts.normalization = 'sqrt';
+opts.normalization = 'sqrt_L2';
 opts = vl_argparse(opts, varargin) ;
 
 encoder.type = opts.type ;
