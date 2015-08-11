@@ -437,7 +437,7 @@ for epoch=1:opts.numEpochs
   info.val.error(end) = info.val.error(end) / numel(val) ;
   info.val.topFiveError(end) = info.val.topFiveError(end) / numel(val) ;
   info.val.speed(end) = numel(val) / info.val.speed(end) ;
-  save(modelPath(epoch), 'neta', 'netb', 'netc', 'info') ;
+  save(modelPath(epoch), 'neta', 'netb', 'netc', 'info', '-v7.3') ;
 
   figure(1) ; clf ;
   subplot(1,2,1) ;
