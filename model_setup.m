@@ -111,7 +111,7 @@ switch opts.dataset
     case 'cubcrop'
         imdb = cub_get_database(opts.cubDir, true, false);
     case 'cub'
-        imdb = cub_get_database(opts.cubDir, false, true);
+        imdb = cub_get_database(opts.cubDir, false, false);
     case 'dogcrop'
         imdb = stanford_dogs_get_database(opts.dogDir, true);
     case 'dog'
