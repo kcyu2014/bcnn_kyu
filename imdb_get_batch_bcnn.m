@@ -82,7 +82,7 @@ for i=1:numel(images)
   end
   
   % resize
-  if doResize
+  if opts.doResize
       w = size(imt,2) ;
       h = size(imt,1) ;
       factor = [(opts.imageSize(1)+opts.border(1))/h ...
