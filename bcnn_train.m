@@ -238,9 +238,9 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
      
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, false, opts.scale) ;
     if opts.prefetch
-      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
+      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), false, opts.scale) ;
       getBatch(imdb, nextBatch) ;
     end
     
@@ -386,9 +386,9 @@ for epoch=1:opts.numEpochs
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
       
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, false, opts.scale) ;
     if opts.prefetch
-      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
+      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), false, opts.scale) ;
       getBatch(imdb, nextBatch) ;
     end
     

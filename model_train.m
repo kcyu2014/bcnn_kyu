@@ -46,7 +46,7 @@ if ~exist(opts.resultPath)
           'useGpu', opts.useGpu) ;
         encoder_save(encoder, opts.encoders{i}.path) ;
       end
-      code = encoder_extract_for_images(encoder, imdb, imdb.images.id) ;
+      code = encoder_extract_for_images(encoder, imdb, imdb.images.id, 'dataAugmentation', opts.dataAugmentation) ;
       savefast(opts.encoders{i}.codePath, 'code') ;
     end
     psi{i} = code ;
@@ -76,6 +76,9 @@ str{end+1} = sprintf(' mAP: %.1f', info.test.map*100) ;
 if isfield(info.test, 'acc')
   str{end+1} = sprintf(' acc: %6.1f ', info.test.acc*100);
 end
+if isfield(info.test, 'im_acc')
+  str{end+1} = sprintf(' acc wo normlization: %6.1f ', info.test.im_acc*100);
+end
 str{end+1} = sprintf('\n') ;
 str = cat(2, str{:}) ;
 fprintf('%s', str) ;
@@ -88,7 +91,6 @@ fclose(f) ;
 
 
 
-
 % -------------------------------------------------------------------------
 function info = traintest(opts, imdb, psi)
 % -------------------------------------------------------------------------
@@ -96,28 +98,30 @@ function info = traintest(opts, imdb, psi)
 % Train using verification or not
 verificationTask = isfield(imdb, 'pairs');
 
+switch opts.dataAugmentation
+    case 'none'
+        ts =1 ;
+    case 'f2'
+        ts = 2;
+    otherwise
+        error('not supported data augmentation')
+end
+
 if verificationTask, 
     train = ismember(imdb.pairs.set, [1 2]) ;
     test = ismember(imdb.pairs.set, 3) ;
 else % classification task
     multiLabel = (size(imdb.images.label,1) > 1) ; % e.g. PASCAL VOC cls
     train = ismember(imdb.images.set, [1 2]) ;
+    train = repmat(train, ts, []);
+    train = train(:)';
     test = ismember(imdb.images.set, 3) ;
+    test = repmat(test, ts, []);
+    test = test(:)';
     info.classes = find(imdb.meta.inUse) ;
     
-    cc = 100;
-    
-    normCheck = arrayfun(@(x) norm(psi(:,x)), 1:cc);
-    if(sum(normCheck) > cc*1.0001 || sum(normCheck) < cc*0.9999)
-        L2norm = sqrt(sum(psi(:,train).*psi(:,train),1));
-        C = mean(L2norm);
-    else
-        C = 1;
-    end
-    C = double(C);
-    
     % Train classifiers
-    
+    C = 1 ;
     w = {} ;
     b = {} ;
     
@@ -129,25 +133,14 @@ else % classification task
       else
         y = imdb.images.label(c,:) ;
       end
-      %{
-    switch opts.normalization
-        case 'sqrt'
-            C = 1 ;
-        case 'none'
-            L2norm = sqrt(sum(psi(:,train & y ~=0).*psi(:,train & y ~=0),1));
-            C = 1/mean(L2norm);
-            
-            disp(['svm C: ', num2str(C)])
-            
-        otherwise
-            C = 1;
-    end
-      %}
+      y_test = y(test(1:ts:end));
+      y = repmat(y, ts, []);
+      y = y(:)';
       np = sum(y(train) > 0) ;
       nn = sum(y(train) < 0) ;
       n = np + nn ;
 
-      [w{c},b{c}] = vl_svmtrain(psi(:,train & y ~= 0), y(train & y ~= 0), C/n, ...
+      [w{c},b{c}] = vl_svmtrain(psi(:,train & y ~= 0), y(train & y ~= 0), 1/(n* C), ...
         'epsilon', 0.001, 'verbose', 'biasMultiplier', 1, ...
         'maxNumIterations', n * 200) ;
 
@@ -161,11 +154,14 @@ else % classification task
       pred = w{c}'*psi + b{c} ;
 
       scores{c} = pred ;
+     
+      pred_test = reshape(pred(test), ts, []);
+      pred_test = mean(pred_test, 1);
 
       [~,~,i]= vl_pr(y(train), pred(train)) ; ap(c) = i.ap ; ap11(c) = i.ap_interp_11 ;
-      [~,~,i]= vl_pr(y(test), pred(test)) ; tap(c) = i.ap ; tap11(c) = i.ap_interp_11 ;
+      [~,~,i]= vl_pr(y_test, pred_test) ; tap(c) = i.ap ; tap11(c) = i.ap_interp_11 ;
       [~,~,i]= vl_pr(y(train), pred(train), 'normalizeprior', 0.01) ; nap(c) = i.ap ;
-      [~,~,i]= vl_pr(y(test), pred(test), 'normalizeprior', 0.01) ; tnap(c) = i.ap ;
+      [~,~,i]= vl_pr(y_test, pred_test, 'normalizeprior', 0.01) ; tnap(c) = i.ap ;
     end
     
     % Book keeping
@@ -191,9 +187,21 @@ else % classification task
 
     % Compute predictions, confusion and accuracy
     [~,preds] = max(info.scores,[],1) ;
+    info.testScores = reshape(info.scores(:,test), size(info.scores,1), ts, []);
+    info.testScores = reshape(mean(info.testScores, 2), size(info.testScores,1), []);
+    [~,pred_test] = max(info.testScores, [], 1);
     [~,gts] = ismember(imdb.images.label, info.classes) ;
+    gts_test = gts(test(1:ts:end));
+    gts = repmat(gts, ts, []);
+    gts = gts(:)';
+
     [info.train.confusion, info.train.acc] = compute_confusion(numel(info.classes), gts(train), preds(train)) ;
-    [info.test.confusion, info.test.acc] = compute_confusion(numel(info.classes), gts(test), preds(test)) ;
+    [info.test.confusion, info.test.acc] = compute_confusion(numel(info.classes), gts_test, pred_test) ;
+    
+    
+    [~, info.train.im_acc] = compute_confusion(numel(info.classes), gts(train), preds(train), true) ;
+    [~, info.test.im_acc] = compute_confusion(numel(info.classes), gts_test, pred_test, true) ;
+%     [info.test.confusion, info.test.acc] = compute_confusion(numel(info.classes), gts(test), preds(test)) ;
 end
 
 % -------------------------------------------------------------------------
@@ -202,6 +210,7 @@ function code = encoder_extract_for_images(encoder, imdb, imageIds, varargin)
 opts.batchSize = 64 ;
 opts.maxNumLocalDescriptorsReturned = 500 ;
 opts.concatenateCode = true;
+opts.dataAugmentation = 'none';
 opts = vl_argparse(opts, varargin) ;
 
 [~,imageSel] = ismember(imageIds, imdb.images.id) ;
@@ -218,37 +227,71 @@ numWorkers = matlabpool('size') ;
 %parfor (b = 1:numel(batches), numWorkers)
 for b = numel(batches):-1:1
   batchResults{b} = get_batch_results(imdb, imageIds, batches{b}, ...
-                        encoder, opts.maxNumLocalDescriptorsReturned) ;
+                        encoder, opts.maxNumLocalDescriptorsReturned, opts.dataAugmentation) ;
 end
 
-code = cell(size(imageIds)) ;
+
+switch opts.dataAugmentation
+    case 'none'
+        ts = 1;
+    case 'f2'
+        ts = 2;
+    otherwise
+        error('not supported data augmentation')
+end
+
+code = cell(1, numel(imageIds)*ts) ;
 for b = 1:numel(batches)
   m = numel(batches{b});
   for j = 1:m
       k = batches{b}(j) ;
-      code{k} = batchResults{b}.code{j};
+      for aa=1:ts
+        code{(k-1)*ts+aa} = batchResults{b}.code{(j-1)*ts+aa};
+      end
   end
 end
 if opts.concatenateCode
    code = cat(2, code{:}) ;
 end
-
 % code is either:
 % - a cell array, each cell containing an array of local features for a
 %   segment
 % - an array of FV descriptors, one per segment
 
 % -------------------------------------------------------------------------
-function result = get_batch_results(imdb, imageIds, batch, encoder, maxn)
+function result = get_batch_results(imdb, imageIds, batch, encoder, maxn, dataAugmentation)
 % -------------------------------------------------------------------------
 m = numel(batch) ;
 im = cell(1, m) ;
 task = getCurrentTask() ;
 if ~isempty(task), tid = task.ID ; else tid = 1 ; end
+
+switch dataAugmentation
+    case 'none'
+        tfs = [0 ; 0 ; 0 ];
+    case 'f2'
+        tfs = [...
+            0   0 ;
+            0   0 ;
+            0   1];
+    otherwise
+        error('not supported data augmentation')
+end
+
+ts = size(tfs,2);
+im = cell(1, m*ts);
 for i = 1:m
-  fprintf('Task: %03d: encoder: extract features: image %d of %d\n', tid, batch(i), numel(imageIds)) ;
-  im{i} = imread(fullfile(imdb.imageDir, imdb.images.name{imdb.images.id == imageIds(batch(i))}));
-  if size(im{i}, 3) == 1, im{i} = repmat(im{i}, [1 1 3]);, end; %grayscale image
+    fprintf('Task: %03d: encoder: extract features: image %d of %d\n', tid, batch(i), numel(imageIds)) ;
+    for j=1:ts
+        idx = (i-1)*ts+j;
+        im{idx} = imread(fullfile(imdb.imageDir, imdb.images.name{imdb.images.id == imageIds(batch(i))}));
+        if size(im{idx}, 3) == 1, im{idx} = repmat(im{idx}, [1 1 3]); end; %grayscale image
+        
+        tf = tfs(:,j) ;
+        if tf(3), sx = fliplr(1:size(im{idx}, 2)) ;
+            im{idx} = im{idx}(:,sx,:);
+        end
+    end
 end
 
 if ~isfield(encoder, 'numSpatialSubdivisions')

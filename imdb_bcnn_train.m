@@ -3,7 +3,7 @@ function imdb_bcnn_train(imdb, opts, varargin)
 
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
-opts.train.batchSize = 256 ;
+opts.train.batchSize = opts.batchSize ;
 opts.train.numEpochs = 45 ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
@@ -33,18 +33,30 @@ end
 
 
 
-bcnn_net = initializeNetwork(imdb, opts) ;
-fn = getBatchWrapper(bcnn_net.neta.normalization, opts.numFetchThreads) ;
+net = initializeNetwork(imdb, opts) ;
 
-[bcnn_net,info] = bcnn_train(bcnn_net, fn, imdb, opts.train, 'batchSize', opts.batchSize, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
-
-
+shareWeights = ~isfield(net, 'netc');
+ 
 if(~exist(fullfile(opts.expDir, 'fine-tuned-model'), 'dir'))
     mkdir(fullfile(opts.expDir, 'fine-tuned-model'))
 end
+   
+if(shareWeights)
+    fn = getBatchWrapper(net.normalization, opts.numFetchThreads, opts.bcnnScale, true) ;
+    [net,info] = vl_bcnn_train(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
+    
+    net = vl_simplenn_move(net, 'cpu');
+    saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model.mat'), net);
 
-saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model-neta.mat'), bcnn_net.neta);
-saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model-netb.mat'), bcnn_net.netb);
+else
+    fn = getBatchWrapper(net.neta.normalization, opts.numFetchThreads) ;    
+    [net,info] = bcnn_train(net, fn, imdb, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
+    
+    net.neta = vl_simplenn_move(net.neta, 'cpu');
+    net.netb = vl_simplenn_move(net.netb, 'cpu');
+    saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model-neta.mat'), net.neta);
+    saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model-netb.mat'), net.netb);
+end
 
 % -------------------------------------------------------------------------
 function saveNetwork(fileName, net)
@@ -74,15 +86,15 @@ save(fileName, 'layers', 'classes', 'normalization');
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(opts, numThreads)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch,augmentation) getBatch(imdb,batch,augmentation,opts,numThreads) ;
+fn = @(imdb,batch,augmentation, doResize, scale) getBatch(imdb,batch,augmentation,doResize, scale, opts,numThreads) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, augmentation, opts, numThreads)
+function [im,labels] = getBatch(imdb, batch, augmentation, doResize, scale, opts, numThreads)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
 im = imdb_get_batch_bcnn(images, opts, ...
                             'numThreads', numThreads, ...
-                            'prefetch', nargout == 0, 'augmentation', augmentation);
+                            'prefetch', nargout == 0, 'augmentation', augmentation, 'doResize', doResize, 'scale', scale);
 labels = imdb.images.label(batch) ;
 numAugments = size(im,4)/numel(batch);
 labels = reshape(repmat(labels, numAugments, 1), 1, size(im,4));

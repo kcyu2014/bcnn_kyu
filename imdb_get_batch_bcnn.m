@@ -10,7 +10,15 @@ opts.numAugments = 1 ;
 opts.numThreads = 0 ;
 opts.prefetch = false ;
 opts.keepAspect = true;
+opts.doResize = true;
+opts.scale = 1;
 opts = vl_argparse(opts, varargin);
+
+
+opts.imageSize = opts.imageSize.*opts.scale;
+if(opts.scale ~= 1)
+    opts.averageImage = mean(mean(opts.averageImage, 1),2);
+end
 
 % fetch is true if images is a list of filenames (instead of
 % a cell array of images)
@@ -56,8 +64,10 @@ if ~fetch
   im = images ;
 end
 
-imo = cell(1, numel(images)) ;
+imo = cell(1, numel(images)*opts.numAugments) ;
+[~,augmentations] = sort(rand(size(tfs,2), numel(images)), 1) ;
 
+si=1;
 for i=1:numel(images)
 
   % acquire image
@@ -68,8 +78,35 @@ for i=1:numel(images)
     imt = im{i} ;
   end
   if size(imt,3) == 1
-    imt = cat(3, imt, imt, imt) ;
+      imt = cat(3, imt, imt, imt) ;
   end
-    
-  imo{i} = imt;
+  
+  % resize
+  if doResize
+      w = size(imt,2) ;
+      h = size(imt,1) ;
+      factor = [(opts.imageSize(1)+opts.border(1))/h ...
+          (opts.imageSize(2)+opts.border(2))/w];
+      
+      if opts.keepAspect
+          factor = max(factor) ;
+      end
+      if any(abs(factor - 1) > 0.0001)
+          imt = imresize(imt, ...
+              'scale', factor, ...
+              'method', opts.interpolation) ;
+      end
+  end
+  
+  % flip
+  w = size(imt,2) ;
+  for ai = 1:opts.numAugments
+    t = augmentations(ai,i) ;
+    tf = tfs(:,t) ;
+    sx = 1:w;
+    if tf(3), sx = fliplr(sx) ; end
+    imo{si} = imt(:,sx,:);
+    si = si + 1 ;
+  end
+%   imo{i} = imt;
 end
