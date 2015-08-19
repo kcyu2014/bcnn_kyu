@@ -24,6 +24,8 @@ opts.plotDiagnostics = false ;
 opts.layera = 14;
 opts.layerb = 14;
 opts.regionBorder = 0.05;
+opts.dataAugmentation = {'none', 'none', 'none'};
+opts.scale = 2;
 
 opts = vl_argparse(opts, varargin) ;
 
@@ -236,7 +238,7 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
      
-    [im, labels] = getBatch(imdb, batch) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}) ;
     if opts.prefetch
       nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
       getBatch(imdb, nextBatch) ;
@@ -248,9 +250,9 @@ for epoch=1:opts.numEpochs
         resc = [];
     end
     
-    [psi, ~, ~, resa, resb] = get_bcnn_features_onescale_batch(neta, netb, im, ...
+    [psi, ~, ~, resa, resb] = get_batch_bcnn_features_onescale(neta, netb, im, ...
         'regionBorder', opts.regionBorder, ...
-        'normalization', 'none', 'networkconservmemory', false);
+        'normalization', 'none', 'networkconservmemory', false, 'scales', opts.scale);
 
 
     if opts.useGpu
@@ -384,7 +386,7 @@ for epoch=1:opts.numEpochs
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
       
-    [im, labels] = getBatch(imdb, batch) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}) ;
     if opts.prefetch
       nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
       getBatch(imdb, nextBatch) ;
@@ -396,8 +398,8 @@ for epoch=1:opts.numEpochs
         resc = [];
     end
     
-    [psi, ~, ~, ~, ~] = get_bcnn_features_onescale_batch(neta, netb, im, ...
-        'regionBorder', opts.regionBorder, 'normalization', 'none');
+    [psi, ~, ~, ~, ~] = get_batch_bcnn_features_onescale(neta, netb, im, ...
+        'regionBorder', opts.regionBorder, 'normalization', 'none', 'scales', opts.scale);
     
     psi = cat(2, psi{:});
     
@@ -599,9 +601,6 @@ if w1*h1 <= w2*h2,
     indw = round(linspace(1,w2,w1));
     indh = round(linspace(1,h2,h1));
     dB(indh, indw, :) = tempdB;
-%     indh = ceil(h1.*[1:h2]./h2);
-%     indw = ceil(w1.*[1:w2]./w2);
-%     dB = dB(indh, indw, :);
     dA = reshape(dA, h1, w1, size(dA,2));
 else
     %A is downsampled, upsample dA back to original size
@@ -617,26 +616,6 @@ else
     indw = round(linspace(1,w1,w2));
     indh = round(linspace(1,h1,h2));
     dA(indh, indw, :) = tempdA;  
-%     indh = ceil(h2.*[1:h1]./h1);
-%     indw = ceil(w2.*[1:w1]./w1);
-%     dA = dA(indh, indw, :);
-%     dA = imresize(dA, s, 'bilinear');
     dB = reshape(dB, h2, w2, size(dB, 2));
 end
 
-
-%{
-if w1*h1 <= w2*h2,
-    %B is downsampled, upsample dB back to original size
-    dB = reshape(dB, h1, w1, size(dB,2));
-    s = h2/h1;
-    dB = imresize(dB, s);
-    dA = reshape(dA, h1, w1, size(dA,2));
-else
-    %A is downsampled, upsample dA back to original size
-    dA = reshape(dA, h2, h2, size(dA,2));
-    s = h1/h2;
-    dA = imresize(dA, s);
-    dB = reshape(dB, h2, w2, size(dB, 2));
-end
-%}
