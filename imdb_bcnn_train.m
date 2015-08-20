@@ -43,7 +43,7 @@ end
    
 if(shareWeights)
     fn = getBatchWrapper(net.normalization, opts.numFetchThreads, opts.bcnnScale, true) ;
-    [net,info] = vl_bcnn_train(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
+    [net,info] = bcnn_train_sw(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
     
     net = vl_simplenn_move(net, 'cpu');
     saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model.mat'), net);
