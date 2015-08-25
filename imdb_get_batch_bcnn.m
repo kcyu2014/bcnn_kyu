@@ -9,13 +9,13 @@ opts.interpolation = 'bilinear' ;
 opts.numAugments = 1 ;
 opts.numThreads = 0 ;
 opts.prefetch = false ;
-opts.keepAspect = true;
+opts.keepAspect = false;
 opts.doResize = true;
 opts.scale = 1;
 opts = vl_argparse(opts, varargin);
 
 
-opts.imageSize = opts.imageSize.*opts.scale;
+opts.imageSize(1:2) = opts.imageSize(1:2).*opts.scale;
 if(opts.scale ~= 1)
     opts.averageImage = mean(mean(opts.averageImage, 1),2);
 end
@@ -93,20 +93,34 @@ for i=1:numel(images)
       end
       if any(abs(factor - 1) > 0.0001)
           imt = imresize(imt, ...
-              'scale', factor, ...
+              opts.imageSize(1:2), ...
               'method', opts.interpolation) ;
+%           imt = imresize(imt, ...
+%               'scale', factor, ...
+%               'method', opts.interpolation) ;
       end
   end
   
-  % flip
+  % crop & flip
   w = size(imt,2) ;
+  h = size(imt,1) ;
   for ai = 1:opts.numAugments
     t = augmentations(ai,i) ;
     tf = tfs(:,t) ;
+%     dx = floor((w - opts.imageSize(2)) * tf(2)) ;
+%     dy = floor((h - opts.imageSize(1)) * tf(1)) ;
+%     sx = (1:opts.imageSize(2)) + dx ;
+%     sy = (1:opts.imageSize(1)) + dy ;
     sx = 1:w;
     if tf(3), sx = fliplr(sx) ; end
     imo{si} = imt(:,sx,:);
     si = si + 1 ;
   end
-%   imo{i} = imt;
+end
+
+
+if ~isempty(opts.averageImage)
+    for i=1:numel(imo)
+        imo{i} = bsxfun(@minus, imo{i}, opts.averageImage) ;
+    end
 end

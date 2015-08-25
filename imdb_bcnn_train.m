@@ -4,7 +4,7 @@ function imdb_bcnn_train(imdb, opts, varargin)
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
 opts.train.batchSize = opts.batchSize ;
-opts.train.numEpochs = 45 ;
+opts.train.numEpochs = 100 ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.prefetch = false ;
@@ -34,7 +34,6 @@ end
 
 
 net = initializeNetwork(imdb, opts) ;
-
 shareWeights = ~isfield(net, 'netc');
  
 if(~exist(fullfile(opts.expDir, 'fine-tuned-model'), 'dir'))
@@ -42,7 +41,7 @@ if(~exist(fullfile(opts.expDir, 'fine-tuned-model'), 'dir'))
 end
    
 if(shareWeights)
-    fn = getBatchWrapper(net.normalization, opts.numFetchThreads, opts.bcnnScale, true) ;
+    fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
     [net,info] = bcnn_train_sw(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
     
     net = vl_simplenn_move(net, 'cpu');
@@ -96,8 +95,9 @@ im = imdb_get_batch_bcnn(images, opts, ...
                             'numThreads', numThreads, ...
                             'prefetch', nargout == 0, 'augmentation', augmentation, 'doResize', doResize, 'scale', scale);
 labels = imdb.images.label(batch) ;
-numAugments = size(im,4)/numel(batch);
-labels = reshape(repmat(labels, numAugments, 1), 1, size(im,4));
+% numAugments = size(im,4)/numel(batch);
+numAugments = numel(im)/numel(batch);
+labels = reshape(repmat(labels, numAugments, 1), 1, numel(im));
 
 
 
@@ -296,8 +296,9 @@ else
     assert(~isempty(encoderOpts.modela), 'network is not specified');
         
     net = load(encoderOpts.modela); % Load model if specified
-%     net = load(fullfile('data/models', opts.model)); % Load model if specified
-    fprintf('Initializing from model: %s\n', opts.model);
+    net.normalization.keepAspect = false;
+
+%    fprintf('Initializing from model: %s\n', opts.model);
     maxLayer = max(encoderOpts.layera, encoderOpts.layerb);
 
     net.layers = net.layers(1:maxLayer);
@@ -320,7 +321,11 @@ else
     end
     mapSize2 = numel(net.layers{idx}.biases);
     
-    net.layers{end+1} = struct('type', 'bilinearpool');
+    if(encoderOpts.layera==encoderOpts.layerb)
+        net.layers{end+1} = struct('type', 'bilinearpool');
+    else
+        net.layers{end+1} = struct('type', 'bilinearclpool', 'layer1', encoderOpts.layera, 'later2', encoderOpts.layerb);
+    end
     net.layers{end+1} = struct('type', 'sqrt');
     net.layers{end+1} = struct('type', 'l2norm');
     
@@ -328,6 +333,7 @@ else
     initialW = 0.001/scal * randn(1,1,mapSize1*mapSize2,numClass,'single');
     initialBias = init_bias.*ones(1, numClass, 'single');
     
+    netc.layers = {};
     netc.layers{end+1} = struct('type', 'conv', ...
                 'filters', initialW, ...
                 'biases', initialBias, ...
@@ -351,9 +357,9 @@ else
         if opts.train.useGpu
             netInit = vl_simplenn_move(netInit, 'gpu') ;
         end
-        train = find(imdb.images.set==1);
-        batchSize = opts.inittrain.batchSize;
-        getBatchFn = getBatchWrapper(netInit.normalization, opts.numFetchThreads, opts.bcnnScale);
+        train = find(imdb.images.set==1|imdb.images.set==2);
+        batchSize = 64;
+        getBatchFn = getBatchWrapper(netInit.normalization, opts.numFetchThreads);
         
         
         if exist(opts.inittrain.nonftbcnnDir)
@@ -363,11 +369,12 @@ else
             for t=1:batchSize:numel(train)
                 fprintf('Initialization: extracting bcnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
                 batch = train(t:min(numel(train), t+batchSize-1));
-                [im, labels] = getBatchFn(imdb, batch, opts.dataAugmentation{1}) ;
+                [im, labels] = getBatchFn(imdb, batch, opts.dataAugmentation{1}, true, opts.bcnnScale) ;
                 if opts.train.prefetch
                     nextBatch = train(t+batchSize:min(t+2*batchSize-1, numel(train))) ;
-                    getBatch(imdb, nextBatch, opts.dataAugmentation{1}) ;
+                    getBatcFnh(imdb, nextBatch, opts.dataAugmentation{1}, true, opts.bcnnScale) ;
                 end
+                im = cat(4, im{:});
                 if opts.train.useGpu
                     im = gpuArray(im) ;
                 end
@@ -379,7 +386,7 @@ else
                     'conserveMemory', true, ...
                     'sync', true) ;
                 
-                codeb = squeeze(res(end).x);
+                codeb = squeeze(gather(res(end).x));
                 
                 for i=1:numel(batch)
                     code = codeb(:,i);
@@ -388,7 +395,6 @@ else
             end
         end
         
-        netc.layers = {};
         clear code res netInit
         
         if exist(fullfile(opts.expDir, 'initial_fc.mat'), 'file')

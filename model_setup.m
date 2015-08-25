@@ -3,7 +3,7 @@ setup ;
 
 opts.seed = 1 ;
 opts.batchSize = 128 ;
-opts.useGpu = true ;
+opts.useGpu = 1 ;
 opts.regionBorder = 0.05 ;
 opts.numDCNNWords = 64 ;
 opts.numDSIFTWords = 256 ;
@@ -46,7 +46,7 @@ if nargout <= 1, return ; end
 
 % Setup GPU if needed
 if opts.useGpu
-  gpuDevice(1) ;
+  gpuDevice(opts.useGpu) ;
 end
 
 % -------------------------------------------------------------------------
@@ -110,7 +110,7 @@ switch opts.dataset
     case 'cubcrop'
         imdb = cub_get_database(opts.cubDir, true, false);
     case 'cub'
-        imdb = cub_get_database(opts.cubDir, false, false);
+        imdb = cub_get_database(opts.cubDir, false, true);
     case 'dogcrop'
         imdb = stanford_dogs_get_database(opts.dogDir, true);
     case 'dog'

@@ -50,7 +50,7 @@ for i=1:numel(net.layers)
   end
   if ~isfield(net.layers{i}, 'biasesWeightDecay')
     net.layers{i}.biasesWeightDecay = 1 ;
-  end, true, opts.scale
+  end
 end
 
 if opts.useGpu
@@ -130,13 +130,11 @@ for epoch=1:opts.numEpochs
             fix(t/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
     [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, true, opts.scale) ;
     
-    numAugments = size(im,4)/numel(batch);
-    batch = reshape(repmat(batch, numAugments, 1), 1, size(im,4));
-
     if opts.prefetch
       nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
       getBatch(imdb, nextBatch, opts.dataAugmentation{1}, true, opts.scale) ;
     end
+    im = cat(4, im{:});
     if opts.useGpu
       im = gpuArray(im) ;
     end
@@ -175,7 +173,7 @@ for epoch=1:opts.numEpochs
     info.train = updateError(opts, info.train, net, res, batch_time) ;
 
     fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
-    n = t*numAugments + numel(batch) - 1 ;
+    n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.train.error(end)/n*100, info.train.topFiveError(end)/n*100) ;
     fprintf('\n') ;
@@ -193,14 +191,12 @@ for epoch=1:opts.numEpochs
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix(t/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;
     [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, true, opts.scale) ;
-    
-    numAugments = size(im,4)/numel(batch);
-    batch = reshape(repmat(batch, numAugments, 1), 1, size(im,4));
-    
+        
     if opts.prefetch
       nextBatch = val(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(val))) ;
       getBatch(imdb, nextBatch, opts.dataAugmentation{2}, true, opts.scale) ;
     end
+    im = cat(4, im{:});
     if opts.useGpu
       im = gpuArray(im) ;
     end
@@ -219,7 +215,7 @@ for epoch=1:opts.numEpochs
     info.val = updateError(opts, info.val, net, res, batch_time) ;
 
     fprintf(' %.2f s (%.1f images/s)', batch_time, speed) ;
-    n = t*numAugments + numel(batch) - 1 ;
+    n = t + numel(batch) - 1 ;
     fprintf(' err %.1f err5 %.1f', ...
       info.val.error(end)/n*100, info.val.topFiveError(end)/n*100) ;
     fprintf('\n') ;

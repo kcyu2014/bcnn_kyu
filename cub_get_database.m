@@ -33,6 +33,7 @@ imdb.images.set(imageSet == 1) = 1;
 imdb.images.set(imageSet == 0) = 3;
 
 if useVal
+    rng(0)
     trainSize = numel(find(imageSet==1));
     
     trainIdx = find(imageSet==1);

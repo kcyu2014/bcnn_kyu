@@ -1,4 +1,4 @@
-function run_experiments_bcnn_train_vdvd()
+function run_experiments_bcnn_train_vdvd_2()
 % Fine-tune the CNN model on the facescrub dataset
 %maxNumCompThreads(10);
   bcnnmm.name = 'bcnnmm' ;
