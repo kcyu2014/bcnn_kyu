@@ -56,7 +56,8 @@ for k=1:numel(im)
     if sqrt(crop_h*crop_w) * opts.scales(s) > 1024, continue ; end
     
     % resize the cropped image and extract features everywhere
-    im_resized = imresize(im_cropped, opts.scales(s)) ;
+%     im_resized = imresize(im_cropped, opts.scales(s)) ;
+    im_resized = imresize(single(im{k}), imageSizeA([2 1])*opts.scales(s), 'bilinear') ;
     im_resizedA = bsxfun(@minus, im_resized, averageColourA) ;
     im_resizedB = bsxfun(@minus, im_resized, averageColourB) ;
     

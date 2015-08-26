@@ -199,8 +199,8 @@ else % classification task
     [info.test.confusion, info.test.acc] = compute_confusion(numel(info.classes), gts_test, pred_test) ;
     
     
-    [~, info.train.im_acc] = compute_confusion(numel(info.classes), gts(train), preds(train), true) ;
-    [~, info.test.im_acc] = compute_confusion(numel(info.classes), gts_test, pred_test, true) ;
+    [~, info.train.im_acc] = compute_confusion(numel(info.classes), gts(train), preds(train), ones(size(gts(train))), true) ;
+    [~, info.test.im_acc] = compute_confusion(numel(info.classes), gts_test, pred_test, ones(size(gts_test)), true) ;
 %     [info.test.confusion, info.test.acc] = compute_confusion(numel(info.classes), gts(test), preds(test)) ;
 end
 

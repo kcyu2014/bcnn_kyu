@@ -140,6 +140,8 @@ for i=1:n
   l = net.layers{i} ;
   if(strcmp(l.type, 'bilinearclpool'))
       docrosslayer = true;
+      crlayer1 = l.layer1;
+      crlayer2 = l.layer2;
   end
 end
 
@@ -209,10 +211,16 @@ if doforward
             otherwise
                 error('Unknown layer type %s', l.type) ;
         end
-        if opts.conserveMemory & ~doder & i < numel(net.layers) - 1 & ~docrosslayer
+        if opts.conserveMemory & ~doder & i < numel(net.layers) - 1
             % TODO: forget unnecesary intermediate computations even when
             % derivatives are required
-            res(i).x = [] ;
+            if ~docrosslayer
+                res(i).x = [] ;
+            else
+                if i~=crlayer1+1 && i~=crlayer2+1
+                    res(i).x = [] ;
+                end
+            end
         end
         if gpuMode & opts.sync
             % This should make things slower, but on MATLAB 2014a it is necessary

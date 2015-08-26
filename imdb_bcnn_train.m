@@ -1,10 +1,11 @@
 function imdb_bcnn_train(imdb, opts, varargin)
 % Train a bilinear CNN model on a dataset supplied by imdb
 
+
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
 opts.train.batchSize = opts.batchSize ;
-opts.train.numEpochs = 100 ;
+opts.train.numEpochs = opts.numEpochs ;
 opts.train.continue = true ;
 opts.train.useGpu = false ;
 opts.train.prefetch = false ;
@@ -42,14 +43,14 @@ end
    
 if(shareWeights)
     fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
-    [net,info] = bcnn_train_sw(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
+    [net,info] = bcnn_train_sw(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale, 'momentum', opts.momentum) ;
     
     net = vl_simplenn_move(net, 'cpu');
     saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model.mat'), net);
 
 else
     fn = getBatchWrapper(net.neta.normalization, opts.numFetchThreads) ;    
-    [net,info] = bcnn_train(net, fn, imdb, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale) ;
+    [net,info] = bcnn_train(net, fn, imdb, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale, 'momentum', opts.momentum) ;
     
     net.neta = vl_simplenn_move(net.neta, 'cpu');
     net.netb = vl_simplenn_move(net.netb, 'cpu');
@@ -324,7 +325,7 @@ else
     if(encoderOpts.layera==encoderOpts.layerb)
         net.layers{end+1} = struct('type', 'bilinearpool');
     else
-        net.layers{end+1} = struct('type', 'bilinearclpool', 'layer1', encoderOpts.layera, 'later2', encoderOpts.layerb);
+        net.layers{end+1} = struct('type', 'bilinearclpool', 'layer1', encoderOpts.layera, 'layer2', encoderOpts.layerb);
     end
     net.layers{end+1} = struct('type', 'sqrt');
     net.layers{end+1} = struct('type', 'l2norm');
