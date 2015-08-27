@@ -5,6 +5,7 @@ opts.seed = 1 ;
 opts.batchSize = 128 ;
 opts.numEpochs = 100;
 opts.momentum = 0.9;
+opts.keepAspect = false;
 opts.useVal = false;
 opts.useGpu = 1 ;
 opts.regionBorder = 0.05 ;

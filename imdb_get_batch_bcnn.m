@@ -15,7 +15,7 @@ opts.scale = 1;
 opts = vl_argparse(opts, varargin);
 
 
-opts.imageSize(1:2) = opts.imageSize(1:2).*opts.scale;
+opts.imageSize(1:2) = round(opts.imageSize(1:2).*opts.scale);
 if(opts.scale ~= 1)
     opts.averageImage = mean(mean(opts.averageImage, 1),2);
 end
@@ -90,6 +90,26 @@ for i=1:numel(images)
       
       if opts.keepAspect
           factor = max(factor) ;
+          if any(abs(factor - 1) > 0.0001)
+              
+              imt = imresize(imt, ...
+                  'scale', factor, ...
+                  'method', opts.interpolation) ;
+          end
+          
+          w = size(imt,2) ;
+          h = size(imt,1) ;
+          
+          imt = imcrop(imt, [fix((w-opts.imageSize(1))/2)+1, fix((h-opts.imageSize(2))/2)+1, opts.imageSize(1)-1, opts.imageSize(2)-1]);
+      else
+          imt = imresize(imt, ...
+              opts.imageSize(1:2), ...
+              'method', opts.interpolation) ;          
+      end
+      
+      %{
+      if opts.keepAspect
+          factor = max(factor) ;
       end
       if any(abs(factor - 1) > 0.0001)
           imt = imresize(imt, ...
@@ -99,6 +119,8 @@ for i=1:numel(images)
 %               'scale', factor, ...
 %               'method', opts.interpolation) ;
       end
+      
+      %}
   end
   
   % crop & flip

@@ -29,7 +29,10 @@ borderB = round(info.receptiveField(end)/2+1) ;
 averageColourB = mean(mean(netb.normalization.averageImage,1),2) ;
 imageSizeB = netb.normalization.imageSize;
 
+keepAspect = neta.normalization.keepAspect;
+
 assert(all(imageSizeA == imageSizeB));
+assert(neta.normalization.keepAspect==netb.normalization.keepAspect);
 
 if ~iscell(im)
   im = {im} ;
@@ -57,7 +60,34 @@ for k=1:numel(im)
     
     % resize the cropped image and extract features everywhere
 %     im_resized = imresize(im_cropped, opts.scales(s)) ;
-    im_resized = imresize(single(im{k}), imageSizeA([2 1])*opts.scales(s), 'bilinear') ;
+%     im_resized = imresize(single(im{k}), imageSizeA([2 1])*opts.scales(s), 'bilinear') ;
+    
+    
+    if keepAspect
+        w = size(im{k},2) ;
+        h = size(im{k},1) ;
+        factor = [imageSizeA(1)/h,imageSizeA(2)/w];
+        
+        
+        factor = max(factor)*opts.scales(s) ;
+        if any(abs(factor - 1) > 0.0001)
+            
+            im_resized = imresize(single(im{k}), ...
+                'scale', factor, ...
+                'method', opts.interpolation) ;
+        end
+        
+        w = size(im_resized,2) ;
+        h = size(im_resized,1) ;
+        
+        im_resized = imcrop(im_resized, [fix((w-opts.imageSize(1)*opts.scales(s))/2)+1, fix((h-opts.imageSize(2)*opts.scales(s))/2)+1,...
+            round(opts.imageSize(1)*opts.scales(s))-1, round(opts.imageSize(2)*opts.scales(s))-1]);
+    else
+        im_resized = imresize(single(im{k}), round(imageSizeA([2 1])*opts.scales(s)), 'bilinear');
+    end
+
+    
+    
     im_resizedA = bsxfun(@minus, im_resized, averageColourA) ;
     im_resizedB = bsxfun(@minus, im_resized, averageColourB) ;
     

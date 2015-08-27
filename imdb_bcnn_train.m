@@ -163,6 +163,8 @@ if ~encoderOpts.shareWeight
     
     net.neta = encoder.neta;
     net.netb = encoder.netb;
+    net.neta.normalization.keepAspect = opts.keepAspect;
+    net.netb.normalization.keepAspect = opts.keepAspect;
     
     netc.layers = {};
     
@@ -297,7 +299,7 @@ else
     assert(~isempty(encoderOpts.modela), 'network is not specified');
         
     net = load(encoderOpts.modela); % Load model if specified
-    net.normalization.keepAspect = false;
+    net.normalization.keepAspect = opts.keepAspect;
 
 %    fprintf('Initializing from model: %s\n', opts.model);
     maxLayer = max(encoderOpts.layera, encoderOpts.layerb);
