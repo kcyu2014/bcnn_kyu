@@ -70,18 +70,18 @@ for k=1:numel(im)
         
         
         factor = max(factor)*opts.scales(s) ;
-        if any(abs(factor - 1) > 0.0001)
+        %if any(abs(factor - 1) > 0.0001)
             
             im_resized = imresize(single(im{k}), ...
                 'scale', factor, ...
-                'method', opts.interpolation) ;
-        end
+                'method', 'bilinear') ;
+        %end
         
         w = size(im_resized,2) ;
         h = size(im_resized,1) ;
         
-        im_resized = imcrop(im_resized, [fix((w-opts.imageSize(1)*opts.scales(s))/2)+1, fix((h-opts.imageSize(2)*opts.scales(s))/2)+1,...
-            round(opts.imageSize(1)*opts.scales(s))-1, round(opts.imageSize(2)*opts.scales(s))-1]);
+          im_resized = imcrop(im_resized, [fix((w-imageSizeA(1)*opts.scales(s))/2)+1, fix((h-imageSizeA(2)*opts.scales(s))/2)+1,...
+              round(imageSizeA(1)*opts.scales(s))-1, round(imageSizeA(2)*opts.scales(s))-1]);
     else
         im_resized = imresize(single(im{k}), round(imageSizeA([2 1])*opts.scales(s)), 'bilinear');
     end
