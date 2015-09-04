@@ -80,7 +80,7 @@ for i = 1:length(layers),
 end
 classes = net.classes;
 normalization = net.normalization;
-save(fileName, 'layers', 'classes', 'normalization');
+save(fileName, 'layers', 'classes', 'normalization', '-v7.3');
 
 
 % -------------------------------------------------------------------------
@@ -418,7 +418,7 @@ else
                 'batchSize', opts.inittrain.batchSize, 'weightDecay', opts.inittrain.weightDecay, ...
                 'conserveMemory', true, 'expDir', opts.inittrain.expDir);
             
-            save(fullfile(opts.expDir, 'initial_fc.mat'), 'netc') ;
+            save(fullfile(opts.expDir, 'initial_fc.mat'), 'netc', '-v7.3') ;
         end
         
 %         initialW = gather(netc.layers{1}.filters);
