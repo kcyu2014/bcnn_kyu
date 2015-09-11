@@ -3,7 +3,7 @@ function imdb_cnn_train(imdb, opts, varargin)
 
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
-opts.train.batchSize = 256 ;
+opts.train.batchSize = opts.batchSize ;
 opts.train.numEpochs = 25 ;
 opts.train.continue = true ;
 opts.train.useGpu = true ;
