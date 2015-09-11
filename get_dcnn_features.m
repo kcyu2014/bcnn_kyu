@@ -25,7 +25,7 @@ opts = vl_argparse(opts, varargin) ;
 % receptive field.
 
 if isempty(net)
-    keepAspect = false;
+    keepAspect = true;
 else
     keepAspect = net.normalization.keepAspect;
 end

@@ -59,14 +59,15 @@ function run_experiments()
     'modelb', 'data/models/imagenet-vgg-verydeep-16.mat', ...
     'layerb', 30,...
     };
- 
-  setupNameList = {'rcnn', 'rcnnvd', 'dcnn', 'dcnnvd', 'dsift', 'bcnnmm', 'bcnnvdvd', 'bcnnvdm'};
-  encoderList = {{rcnn}, {rcnnvd}, {dcnn}, {dcnnvd}, {dsift}, {bcnnmm}, {bcnnvdvd}, {bcnnvdm}};
-%   setupNameList = {'bcnnvdvd', 'bcnnvdm', 'bcnnmm'};
-%   encoderList = {{bcnnvdvd}, {bcnnvdm}, {bcnnmm}};
-%   setupNameList = {'dcnn', 'dcnnvd', 'dsift'};
-%   encoderList = {{dcnn}, {dcnnvd}, {dsift}};
-  datasetList = {{'cub', 1}, {'cars', 1}, {'aircraft-variant', 1}, {'cubcrop', 1} };
+%  
+%   setupNameList = {'rcnn', 'rcnnvd', 'dcnn', 'dcnnvd', 'dsift', 'bcnnmm', 'bcnnvdvd', 'bcnnvdm'};
+%   encoderList = {{rcnn}, {rcnnvd}, {dcnn}, {dcnnvd}, {dsift}, {bcnnmm}, {bcnnvdvd}, {bcnnvdm}};
+%   datasetList = {{'cub', 1}, {'cars', 1}, {'aircraft-variant', 1}, {'cubcrop', 1} };
+
+  setupNameList = {'dsift', 'rcnnvd', 'dcnn', 'dcnnvd', 'dsift'};
+  encoderList = {{dsift}, {rcnnvd}, {dcnn}, {dcnnvd}, {dsift}};
+  datasetList = {{'cub', 1}};
+
 
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
