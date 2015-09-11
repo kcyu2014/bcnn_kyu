@@ -24,6 +24,12 @@ opts = vl_argparse(opts, varargin) ;
 % from a feature index u to pixel coordinate v of the center of the
 % receptive field.
 
+if isempty(net)
+    keepAspect = false;
+else
+    keepAspect = net.normalization.keepAspect;
+end
+
 if opts.useSIFT
   binSize = 8;
   offset = 1 + 3/2 * binSize ;
@@ -65,7 +71,31 @@ for k=1:numel(im)
     if sqrt(crop_h*crop_w) * opts.scales(s) > 1024, continue ; end
 
     % resize the cropped image and extract features everywhere
-    im_resized = imresize(im_cropped, opts.scales(s)) ;
+    
+    if keepAspect
+        w = size(im{k},2) ;
+        h = size(im{k},1) ;
+        factor = [imageSize(1)/h,imageSize(2)/w];
+        
+        
+        factor = max(factor)*opts.scales(s) ;
+        %if any(abs(factor - 1) > 0.0001)
+        
+        im_resized = imresize(single(im{k}), ...
+            'scale', factor, ...
+            'method', 'bilinear') ;
+        %end
+        
+        w = size(im_resized,2) ;
+        h = size(im_resized,1) ;
+        
+        im_resized = imcrop(im_resized, [fix((w-imageSize(1)*opts.scales(s))/2)+1, fix((h-imageSize(2)*opts.scales(s))/2)+1,...
+            round(imageSize(1)*opts.scales(s))-1, round(imageSize(2)*opts.scales(s))-1]);
+    else
+        im_resized = imresize(single(im{k}), round(imageSize([2 1])*opts.scales(s)), 'bilinear');
+    end
+    
+%     im_resized = imresize(im_cropped, opts.scales(s)) ;
     if opts.useSIFT
       [frames,descrs] = vl_dsift(mean(im_resized,3), ...
         'size', binSize, ...

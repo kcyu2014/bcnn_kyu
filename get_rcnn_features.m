@@ -52,13 +52,36 @@ resetCache() ;
 
     code = {} ;
     for k=1:numel(im)
-        appendCache(k, getImage(opts, single(im{k}), net.normalization.imageSize(1)));
+        appendCache(k, getImage(opts, single(im{k}), net.normalization.imageSize(1), net.normalization.keepAspect));
     end
     flushCache() ;
 end
 
 % -------------------------------------------------------------------------
-function reg = getImage(opts, im, regionSize)
+function reg = getImage(opts, im, regionSize, keepAspect)
 % -------------------------------------------------------------------------
-    reg = imresize(im, [regionSize, regionSize], 'bicubic') ;
+ 
+    if keepAspect
+        w = size(im,2) ;
+        h = size(im,1) ;
+        factor = [regionSize/h,regionSize/w];
+        
+        
+        factor = max(factor);
+        %if any(abs(factor - 1) > 0.0001)
+        
+        im_resized = imresize(im, ...
+            'scale', factor, ...
+            'method', 'bicubic') ;
+        %end
+        
+        w = size(im_resized,2) ;
+        h = size(im_resized,1) ;
+        
+        reg = imcrop(im_resized, [fix((w-regionSize)/2)+1, fix((h-regionSize)/2)+1,...
+            round(regionSize)-1, round(regionSize)-1]);
+    else
+        reg = imresize(im, [regionSize, regionSize], 'bicubic') ;
+    end
+%     reg = imresize(im, [regionSize, regionSize], 'bicubic') ;
 end
