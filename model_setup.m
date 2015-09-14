@@ -17,6 +17,7 @@ opts.excludeDifficult = true ;
 opts.datasetSize = inf;
 opts.encoders = {struct('type', 'rcnn', 'opts', {})} ;
 opts.dataset = 'lfw' ;
+opts.carsDir = 'data/cars'; 
 opts.janusDir = '/scratch2/data/CS2-protocal';
 opts.janusFaceDir = '/scratch2/data/CS2';
 opts.facescrubDir = 'data/facescrub' ;
@@ -137,6 +138,8 @@ switch opts.dataset
     case 'janus-classify'
         imdb = janus_face_get_database(opts.janusDir, opts.janusFaceDir, ...
                                     opts.seed, 'classify' );
+    case 'cars'
+        imdb = cars_get_database(opts.carsDir, false, opts.useVal);
     otherwise
         error('Unknown dataset %s', opts.dataset) ;
 end

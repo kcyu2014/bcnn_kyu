@@ -3,7 +3,7 @@ function imdb_cnn_train(imdb, opts, varargin)
 
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
-opts.train.batchSize = 256 ;
+opts.train.batchSize = opts.batchSize ;
 opts.train.numEpochs = 25 ;
 opts.train.continue = true ;
 opts.train.useGpu = true ;
@@ -102,6 +102,7 @@ init_bias = 0.1;
 numClass = length(imdb.classes.name);
 if ~isempty(opts.model)
     net = load(fullfile('data/models', opts.model)); % Load model if specified
+    net.normalization.keepAspect = opts.keepAspect;
     fprintf('Initializing from model: %s\n', opts.model);
 
     % Replace the last but one layer with random weights
