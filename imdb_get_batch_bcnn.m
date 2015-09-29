@@ -141,7 +141,7 @@ for i=1:numel(images)
 end
 
 
-if ~isempty(opts.averageImage)
+if ~isempty(opts.averageImage) && opts.doResize
     for i=1:numel(imo)
         imo{i} = bsxfun(@minus, imo{i}, opts.averageImage) ;
     end
