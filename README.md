@@ -1,5 +1,3 @@
-
-
 # BCNN for fine-grained recognition #
 
 This repository contains the code reproducing the results published in ICCV 2015 paper "Bilinear CNN Models for Fine-grained Visual Recognition." The model is evaluated on cub-200-2011, FGVC-aircraft and cars dataset. We tested our code on Ubuntu 14.04.
@@ -33,9 +31,9 @@ We provide three BCNN pre-trained models([M,M], [D,M], and [D,D}) for each of cu
 
 ### bcnn pre-trained on FGVC-aircraft ###
 
-* [bcnn-aircraft-mm-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircraft-mm.mat)
-* [bcnn-aircraft-dm-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircraft-dm.zip)
-* [bcnn-aircraft-dd-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircraft-dd.mat)
+* [bcnn-aircrafts-mm-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircrafts-mm.mat)
+* [bcnn-aircrafts-dm-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircrafts-dm.zip)
+* [bcnn-aircrafts-dd-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-aircrafts-dd.mat)
 
 ### bcnn pre-trained on cars ###
 
