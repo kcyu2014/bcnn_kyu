@@ -28,14 +28,21 @@ This README would normally document whatever steps are necessary to get your app
 * Repo owner or admin
 * Other community or team contact
 
-### BCNN for fine-grained recognition ###
+# BCNN for fine-grained recognition #
 
-dependencies
+##Dependencies##
 
-The repository contains code using VLFEAT and MATCONVNET to:
-+ Extract convolutional feature
-+ fine-tuning BCNN models
-+ train linear svm classifier on features
+###The repository contains code using VLFeat and MatConveNet to:###
+* Extract convolutional feature
+* fine-tuning BCNN models
+* train linear svm classifier on features
 
-please go to MatConvNet and Vlfeat git repositories to download the packages. Our code is built based on MatConvNet version 1.0-beta8. Version 1.0-beta9 also works fine for the speedup by cudnn.
+Please visit MatConvNet and Vlfeat git repositories to download the packages. Our code is built based on MatConvNet version 1.0-beta8. Version 1.0-beta9 also works fine for the speedup by cudnn.
 Edit setup.m to link to the packages.
+
+To retrieve older version of MatConvNet:
+
+      git fetch --tags
+      git checkout tags/v1.0-beta8
+
+##Start the code###
