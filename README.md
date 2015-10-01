@@ -29,3 +29,9 @@ This README would normally document whatever steps are necessary to get your app
 * Other community or team contact
 
 ### BCNN for fine-grained recognition ###
+
+dependencies
+
+The repository contains code using VLFEAT and MATCONVNET to:
+please go to MatConvNet and Vlfeat git repositories to download the packages. Our code is built based on MatConvNet version 1.0-beta8. Version 1.0-beta9 also works fine for the speedup by cudnn.
+Edit setup.m to link to the packages.
