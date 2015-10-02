@@ -41,7 +41,7 @@ We provide three BCNN pre-trained models([M,M], [D,M], and [D,D}) for each of cu
 * [bcnn-car-dm-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cars-dm.zip)
 * [bcnn-car-dd-net](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cars-dd.mat)
 
-###Get dataset###
+##Get dataset##
 
 Please download the datasets from their webpage and edit the function model_setup for your dataset location.
 
@@ -49,10 +49,10 @@ Please download the datasets from their webpage and edit the function model_setu
 * [FGVC-aircraft](http://www.robots.ox.ac.uk/~vgg/data/oid/)
 * [cars](http://ai.stanford.edu/~jkrause/cars/car_dataset.html)
 
-###Run toy demo###
+##Run toy demo##
 The script demo_test.m takes an input image and runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples of the class with highest score. Please download our pre-trained [B-CNN(D,M)](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cub-dm.zip) and [svm](http://vis-www.cs.umass.edu/bcnn/download/svm_cub_vdm.mat) models for this demo. Choose your favorite bird images, edit the line 4 to 13 for your local setting and run the demo.
 
-###Fine-tune BCNN models###
+##Fine-tune BCNN models##
 See run_experiments_bcnn_train.m for fine-tuning B-CNN model. Note that this code catching all the intermediate results during fine-tuning takes about 200GB disk storage.
 
 Quick Start to fine-tune B-CNN(M,M) model
@@ -71,7 +71,7 @@ Quick Start to fine-tune B-CNN(M,M) model
            'shareWeight', true,...
         } ;
 
-###Evaluation on dataset###
+##Evaluation on dataset##
 You can train a linear svm classifier to evaluate the B-CNN models. See run_experiments.m for training svm and testing. You can simply give the model path as follow:
 
 * MDOELPATH='data/ft-modesl/bcnn-cub-mm.mat'
