@@ -50,7 +50,10 @@ Please download the datasets from their webpage
 * [cars](http://ai.stanford.edu/~jkrause/cars/car_dataset.html)
 
 ###Run toy demo###
+Please download our pre-trained [B-CNN(D,M)](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cub-dm.zip) and [svm](http://vis-www.cs.umass.edu/bcnn/download/svm_cub_vdm.mat) models for this demo. Choose your favorite bird images, edit the line 4 to 13 for your local setting and run the demo.
 
 ###Fine-tune BCNN models###
+See run_experiments_bcnn_train.m for fine-tuning B-CNN model.
 
 ###Evaluation on dataset###
+See run_experiments.m for training svm and testing.
