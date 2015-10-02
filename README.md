@@ -43,17 +43,17 @@ We provide three BCNN pre-trained models([M,M], [D,M], and [D,D}) for each of cu
 
 ###Get dataset###
 
-Please download the datasets from their webpage
+Please download the datasets from their webpage and edit the function model_setup for your dataset location.
 
 * [cub-200-2011](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html)
 * [FGVC-aircraft](http://www.robots.ox.ac.uk/~vgg/data/oid/)
 * [cars](http://ai.stanford.edu/~jkrause/cars/car_dataset.html)
 
 ###Run toy demo###
-Please download our pre-trained [B-CNN(D,M)](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cub-dm.zip) and [svm](http://vis-www.cs.umass.edu/bcnn/download/svm_cub_vdm.mat) models for this demo. Choose your favorite bird images, edit the line 4 to 13 for your local setting and run the demo.
+The script demo_test.m runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples of the class with highest score. Please download our pre-trained [B-CNN(D,M)](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cub-dm.zip) and [svm](http://vis-www.cs.umass.edu/bcnn/download/svm_cub_vdm.mat) models for this demo. Choose your favorite bird images, edit the line 4 to 13 for your local setting and run the demo.
 
 ###Fine-tune BCNN models###
-See run_experiments_bcnn_train.m for fine-tuning B-CNN model.
+See run_experiments_bcnn_train.m for fine-tuning B-CNN model. Note that this code catching all the intermediate results during fine-tuning takes about 200GB disk storage.
 
 ###Evaluation on dataset###
 See run_experiments.m for training svm and testing.
