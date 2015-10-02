@@ -1,14 +1,18 @@
 function run_experiments_bcnn_train()
-% Fine-tune the CNN model on the facescrub dataset
-%maxNumCompThreads(10);
+
+%fine tuning bcnn models
+if(~exist('data', 'dir'))
+    mkdir('data');
+end
+
   bcnnmm.name = 'bcnnmm' ;
   bcnnmm.opts = {...
     'type', 'bcnn', ...
-    'modela', 'data/models/imagenet-vgg-m.mat', ...
-    'layera', 14,...
-    'modelb', 'data/models/imagenet-vgg-m.mat', ...
-    'layerb', 14,...
-    'shareWeight', true,...
+    'modela', 'data/models/imagenet-vgg-m.mat', ...     % intialize network A with pre-trained model
+    'layera', 14,...                                    % specify the output of certain layer of network A to be bilinearly combined
+    'modelb', 'data/models/imagenet-vgg-m.mat', ...     % intialize network B with pre-trained model 
+    'layerb', 14,...                                    % specify the output of certain layer of network B to be bilinearly combined
+    'shareWeight', true,...                             % true: symmetric implementation where two networks are identical
     } ;
 
   bcnnvdm.name = 'bcnnvdm' ;
@@ -18,7 +22,7 @@ function run_experiments_bcnn_train()
     'layera', 30,...
     'modelb', 'data/models/imagenet-vgg-m.mat', ...
     'layerb', 14,...
-    'shareWeight', false,...
+    'shareWeight', false,...                            % false: asymmetric implementation where two networks are distinct
     } ;
 
   bcnnvdvd.name = 'bcnnvdvd' ;
@@ -31,14 +35,9 @@ function run_experiments_bcnn_train()
     'shareWeight', true,...
     };
 
-%{
-  setupNameList = {'bcnnvdm', 'bcnnmm'};
-  encoderList = {{bcnnvdm}, {bcnnmm}}; 
-  datasetList = {{'cubcrop', 1} , {'cub', 1}};  
-%}
     
-  setupNameList = {'bcnnvdm'};
-  encoderList = {{bcnnvdm}}; 
+  setupNameList = {'bcnnmm'};
+  encoderList = {{bcnnmm}}; 
   datasetList = {{'cub', 1}};  
 
   for ii = 1 : numel(datasetList)
@@ -54,15 +53,14 @@ function run_experiments_bcnn_train()
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'bcnn-train-vdm-f2-resize448-keepap', ...
-			  'batchSize', 1, ...
-              'bcnnScale', 2, ...
-              'bcnnLRinit', true, ...
-              'dataAugmentation', {'f2','none','none'},...
-			  'useGpu', 1, ...
-              'numEpochs', 45, ...
-              'momentum', 0.3, ...
-              'keepAspect', true);
+			  'prefix', 'ft-bcnn', ...  % output folder name
+			  'batchSize', 64, ...
+              'bcnnScale', 2, ...       % specify the scale of input images
+              'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
+              'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
+			  'useGpu', 1, ...          %specify the GPU to use. 0 for using CPU
+              'numEpochs', 100, ...
+              'momentum', 0.9);
           imdb_bcnn_train(imdb, opts);
       end
     end
@@ -70,7 +68,8 @@ function run_experiments_bcnn_train()
 end
 
 %{
-m-m model: batchSize 32, momentum 0.9
+The following are the setting we run in which fine-tuning works stable without GPU memory issues on Nvidia K40.
+m-m model: batchSize 64, momentum 0.9
 d-m model: batchSize 1, momentum 0.3
 %}
 

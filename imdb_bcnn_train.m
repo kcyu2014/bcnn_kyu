@@ -33,7 +33,7 @@ if(opts.useGpu)
 end
 
 
-
+% initialize the network
 net = initializeNetwork(imdb, opts) ;
 shareWeights = ~isfield(net, 'netc');
  
@@ -42,6 +42,7 @@ if(~exist(fullfile(opts.expDir, 'fine-tuned-model'), 'dir'))
 end
    
 if(shareWeights)
+    % fine-tuning the symmetric B-CNN
     fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
     [net,info] = bcnn_train_sw(net, imdb, fn, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale, 'momentum', opts.momentum) ;
     
@@ -49,6 +50,7 @@ if(shareWeights)
     saveNetwork(fullfile(opts.expDir, 'fine-tuned-model', 'final-model.mat'), net);
 
 else
+    % fine-tuning the asymmetric B-CNN
     fn = getBatchWrapper(net.neta.normalization, opts.numFetchThreads) ;    
     [net,info] = bcnn_train(net, fn, imdb, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale, 'momentum', opts.momentum) ;
     
@@ -96,7 +98,6 @@ im = imdb_get_batch_bcnn(images, opts, ...
                             'numThreads', numThreads, ...
                             'prefetch', nargout == 0, 'augmentation', augmentation, 'doResize', doResize, 'scale', scale);
 labels = imdb.images.label(batch) ;
-% numAugments = size(im,4)/numel(batch);
 numAugments = numel(im)/numel(batch);
 labels = reshape(repmat(labels, numAugments, 1), 1, numel(im));
 
@@ -104,10 +105,7 @@ labels = reshape(repmat(labels, numAugments, 1), 1, numel(im));
 
 function [im,labels] = getBatch_bcnn_fromdisk(imdb, batch, opts, numThreads)
 % -------------------------------------------------------------------------
-% images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
-% im = imdb_get_batch(images, opts, ...
-%                             'numThreads', numThreads, ...
-%                             'prefetch', nargout == 0);
+
 im = cell(1, numel(batch));
 for i=1:numel(batch)
     load(fullfile(imdb.imageDir, imdb.images.name{batch(i)}));
@@ -185,7 +183,7 @@ if ~encoderOpts.shareWeight
     ch2 = numel(net.netb.layers{idx}.biases);    
     dim = ch1*ch2;
     
-    % randomly initialize the layers on top
+    % randomly initialize the softmax layer
     initialW = 0.001/scal *randn(1,1,dim, numClass,'single');
     initialBias = init_bias.*ones(1, numClass, 'single');
     
@@ -200,59 +198,25 @@ if ~encoderOpts.shareWeight
         'biases', initialBias, ...
         'stride', 1, ...
         'pad', 0, ...
-    'filtersLearningRate', 1000, ...
-    'biasesLearningRate', 1000, ...
-    'filtersWeightDecay', 0, ...
-    'biasesWeightDecay', 0) ;
+        'filtersLearningRate', 1000, ...
+        'biasesLearningRate', 1000, ...
+        'filtersWeightDecay', 0, ...
+        'biasesWeightDecay', 0) ;
 
 
     netc.layers{end+1} = struct('type', 'softmaxloss') ;
     
-    % fine-tuning the fully-connected layers for initialization
+    % logistic regression for the softmax layers
     if(opts.bcnnLRinit)
         if exist(fullfile(opts.expDir, 'initial_fc.mat'))
             load(fullfile(opts.expDir, 'initial_fc.mat'), 'netc') ;
-            %     netc.layers{1}.filtersLearningRate = 10;
-            %     netc.layers{1}.biasesLearningRate = 10;
-            %
-            %     netc.layers{4}.filtersLearningRate = 10;
-            %     netc.layers{4}.biasesLearningRate = 10;
-        else
             
-            %{
-            % fully connected layer
-            fcdim = 1000;
-            netc.layers{end+1} = struct('type', 'conv', ...
-                'filters', 0.001/scal *randn(1,1,dim, fcdim,'single'), ...
-                'biases', init_bias.*ones(1, fcdim, 'single'), ...
-                'stride', 1, ...
-                'pad', 0, ...
-                'filtersLearningRate', 1000, ...
-                'biasesLearningRate', 1000, ...
-                'filtersWeightDecay', 0, ...
-             'biasesWeightDecay', 0) ;
-        
-            netc.layers{end+1} = struct('type', 'relu') ;
-            netc.layers{end+1} = struct('type', 'dropout', ...
-                           'rate', 0.5) ;
-        
-            netc.layers{end+1} = struct('type', 'conv', ...
-             'filters', 0.001/scal *randn(1,1,fcdim, numClass,'single'), ...
-             'biases', init_bias.*ones(1, numClass, 'single'), ...
-             'stride', 1, ...
-                'pad', 0, ...
-                'filtersLearningRate', 1000, ...
-                'biasesLearningRate', 1000, ...
-                'filtersWeightDecay', 0, ...
-                'biasesWeightDecay', 0) ;
-
-            %}
-            
+        else     
             
             trainIdx = find(ismember(imdb.images.set, [1 2]));
             testIdx = find(ismember(imdb.images.set, 3));
             
-            % get bilinear cnn features
+            % compute and cache the bilinear cnn features
             if ~exist(opts.inittrain.nonftbcnnDir)
                 mkdir(opts.inittrain.nonftbcnnDir)
                 batchSize = 10000;
@@ -277,7 +241,7 @@ if ~encoderOpts.shareWeight
             bcnndb.images.set = bcnndb.images.set(trainIdx);
             bcnndb.imageDir = opts.inittrain.nonftbcnnDir;
             
-            % fine-tuning
+            %train logistic regression
             [netc, info] = cnn_train(netc, bcnndb, @getBatch_bcnn_fromdisk, opts.inittrain, ...
                 'batchSize', opts.inittrain.batchSize, 'weightDecay', opts.inittrain.weightDecay, ...
                 'conserveMemory', true, 'expDir', opts.inittrain.expDir);
@@ -285,7 +249,7 @@ if ~encoderOpts.shareWeight
             save(fullfile(opts.expDir, 'initial_fc.mat'), 'netc', '-v7.3') ;
         end
     end
-    % initialize fully-connected layers
+    
     for i=1:numel(netc.layers)
         net.netc.layers{end+1} = netc.layers{i};
     end
@@ -301,7 +265,6 @@ else
     net = load(encoderOpts.modela); % Load model if specified
     net.normalization.keepAspect = opts.keepAspect;
 
-%    fprintf('Initializing from model: %s\n', opts.model);
     maxLayer = max(encoderOpts.layera, encoderOpts.layerb);
 
     net.layers = net.layers(1:maxLayer);
@@ -350,9 +313,7 @@ else
             
     netc.layers{end+1} = struct('type', 'softmaxloss') ;
     
-    %% do logistic regression initialization
-    %==========================================================================================
- 
+    % logistic regression for the softmax layers 
     if(opts.bcnnLRinit)
         netInit = net;
        
@@ -369,6 +330,8 @@ else
             load(fullfile(opts.inittrain.nonftbcnnDir, ['bcnn_nonft_', num2str(train(1), '%05d'), '.mat']));
         else
             mkdir(opts.inittrain.nonftbcnnDir)
+            
+            % compute and cache the bilinear cnn features
             for t=1:batchSize:numel(train)
                 fprintf('Initialization: extracting bcnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
                 batch = train(t:min(numel(train), t+batchSize-1));
@@ -414,6 +377,7 @@ else
             bcnndb.images.set = bcnndb.images.set(train);
             bcnndb.imageDir = opts.inittrain.nonftbcnnDir;
             
+            %train logistic regression
             [netc, info] = cnn_train(netc, bcnndb, @getBatch_bcnn_fromdisk, opts.inittrain, ...
                 'batchSize', opts.inittrain.batchSize, 'weightDecay', opts.inittrain.weightDecay, ...
                 'conserveMemory', true, 'expDir', opts.inittrain.expDir);
@@ -421,11 +385,8 @@ else
             save(fullfile(opts.expDir, 'initial_fc.mat'), 'netc', '-v7.3') ;
         end
         
-%         initialW = gather(netc.layers{1}.filters);
-%         initialBias = gather(netc.layers{1}.biases);
-%         clear netc
     end
-    %==========================================================================================
+    
     for i=1:numel(netc.layers)
         net.layers{end+1} = netc.layers{i};
     end
@@ -452,26 +413,18 @@ n = numel(imageIds) ;
 
 % prepare batches
 n = ceil(numel(imageIds)/opts.batchSize) ;
-% batches = mat2cell(1:numel(imageIds), 1, [opts.batchSize * ones(1, n-1), numel(imageIds) - opts.batchSize*(n-1)]) ;
+
 batches = mat2cell(1:numel(imageIds), 1, [opts.batchSize * ones(1, n-1), numel(imageIds) - opts.batchSize*(n-1)]) ;
 batchResults = cell(1, numel(batches)) ;
 
 % just use as many workers as are already available
 numWorkers = matlabpool('size') ;
-%parfor (b = 1:numel(batches), numWorkers)
+
 for b = numel(batches):-1:1
   batchResults{b} = get_batch_results(imdb, imageIds, batches{b}, ...
                         encoder, opts.maxNumLocalDescriptorsReturned, opts.scale) ;
 end
-%{
-code = zeros(size(batchResults{b}.code{1},1), numel(imageIds), 'single');
-for b=1:numel(batches)
-    m = numel(batches{b});
-    for j=1:m
-        code(:,batches{b}(j)) = batcheResults{b}.code{j};
-    end
-end
-%}
+
 
 code = cell(size(imageIds)) ;
 for b = 1:numel(batches)
@@ -485,7 +438,6 @@ end
 if opts.concatenateCode
     clear batchResults
    code = cat(2, code{:}) ;
-   % code = cell2mat(code);
 end
 
 
