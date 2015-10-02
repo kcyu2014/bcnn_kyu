@@ -1,6 +1,6 @@
 # BCNN for fine-grained recognition #
 
-This repository contains the code reproducing the results published in ICCV 2015 paper "Bilinear CNN Models for Fine-grained Visual Recognition." The model is evaluated on cub-200-2011, FGVC-aircraft and cars dataset. We tested our code on Ubuntu 14.04.
+This repository contains the code reproducing the results published in ICCV 2015 paper "Bilinear CNN Models for Fine-grained Visual Recognition." The model is evaluated on cub-200-2011, FGVC-aircraft and cars dataset. We tested our code on Ubuntu 14.04 using Nvidia K40 GPU.
 
 ##Dependencies##
 
