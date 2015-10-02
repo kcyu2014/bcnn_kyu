@@ -74,7 +74,7 @@ Quick Start to fine-tune B-CNN(M,M) model
 ###Evaluation on dataset###
 You can train a linear svm classifier to evaluate the B-CNN models. See run_experiments.m for training svm and testing. You can simply give the model path as follow:
 
-1. MDOELPATH='data/ft-modesl/bcnn-cub-mm.mat'
+*MDOELPATH='data/ft-modesl/bcnn-cub-mm.mat'
 
         bcnnmm.opts = {..
            'type', 'bcnn', ...
