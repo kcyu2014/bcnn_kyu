@@ -4,7 +4,7 @@ This repository contains the code reproducing the results published in ICCV 2015
 
 ##Dependencies##
 
-###The repository contains code using VLFeat and MatConveNet to:###
+###The repository contains code using VLFeat and MatConvNet to:###
 * Extract convolutional feature
 * fine-tuning BCNN models
 * train linear svm classifiers on features
