@@ -2,7 +2,7 @@ clear
 setup;
 
 svmPath = fullfile('data', 'models', 'svm_cub_vdm.mat');
-imgPath = fullfile('data', 'test_image.jpg');
+imgPath = './test_image.jpg';
 cubDir = fullfile('data', 'cub');
 
 bcnn.opts = {...
