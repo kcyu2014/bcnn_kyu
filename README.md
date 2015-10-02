@@ -55,5 +55,11 @@ The script demo_test.m takes an input image and runs our pre-trained fine-graine
 ###Fine-tune BCNN models###
 See run_experiments_bcnn_train.m for fine-tuning B-CNN model. Note that this code catching all the intermediate results during fine-tuning takes about 200GB disk storage.
 
+Quick Start to fine-tune B-CNN(M,M) model
+1. download CUB-200-2011 dataset
+1. edit opts.cubDir=CUBROOT in model_setup.m, CUBROOT is the location of cub dataset
+1. download imagenet-vgg-m model
+1. 
+
 ###Evaluation on dataset###
 See run_experiments.m for training svm and testing.
