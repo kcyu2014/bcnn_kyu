@@ -2,6 +2,4 @@
 data/
 matconvnet/
 vlfeat/
-run_experiments_bcnn_train_*.m
-run_experiments_*.m
-update_im_acc.m
+toolbox/
