@@ -16,16 +16,10 @@ opts.printDatasetInfo = true ;
 opts.excludeDifficult = true ;
 opts.datasetSize = inf;
 opts.encoders = {struct('type', 'rcnn', 'opts', {})} ;
-opts.dataset = 'lfw' ;
-opts.carsDir = 'data/cars'; 
-opts.janusDir = '/scratch2/data/CS2-protocal';
-opts.janusFaceDir = '/scratch2/data/CS2';
-opts.facescrubDir = 'data/facescrub' ;
-opts.mitDir = 'data/mit_indoor';
+opts.dataset = 'cub' ;
+opts.carsDir = 'data/cars';
 opts.cubDir = 'data/cub';
-opts.dogDir = 'data/stanford_dogs';
 opts.aircraftDir = 'data/fgvc-aircraft-2013b';
-opts.modelnetDir = 'data/modelnet40toon';
 opts.suffix = 'baseline' ;
 opts.prefix = 'v1' ;
 opts.model  = 'imagenet-vgg-m.mat';
@@ -116,28 +110,8 @@ switch opts.dataset
         imdb = cub_get_database(opts.cubDir, true, false);
     case 'cub'
         imdb = cub_get_database(opts.cubDir, false, opts.useVal);
-    case 'dogcrop'
-        imdb = stanford_dogs_get_database(opts.dogDir, true);
-    case 'dog'
-        imdb = stanford_dogs_get_database(opts.dogDir, false);
-    case 'mitindoor'
-        imdb = mit_indoor_get_database(opts.mitDir);
-    case 'facescrub'
-        imdb = facescrub_get_database(opts.facescrubDir) ;
     case 'aircraft-variant'
         imdb = aircraft_get_database(opts.aircraftDir, 'variant');
-    case 'aircraft-model'
-        imdb = aircraft_get_database(opts.aircraftDir, 'model');
-    case 'aircraft-family'
-        imdb = aircraft_get_database(opts.aircraftDir, 'family');
-    case 'modelnet'
-        imdb = modelnet_get_database(opts.modelnetDir);
-    case 'janus-train'
-        imdb = janus_face_get_database_train(opts.janusDir, opts.janusFaceDir, ...
-            opts.seed, 'classify' );
-    case 'janus-classify'
-        imdb = janus_face_get_database(opts.janusDir, opts.janusFaceDir, ...
-                                    opts.seed, 'classify' );
     case 'cars'
         imdb = cars_get_database(opts.carsDir, false, opts.useVal);
     otherwise
