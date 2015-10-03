@@ -1,7 +1,6 @@
-## B-CNN: Bilinear CNNs for fine-grained visual recognition
+# B-CNN: Bilinear CNNs for fine-grained visual recognition
 
 Created by Tsung-Yu Lin, Aruni RoyChowdhury and Subhransu Maji at UMass Amherst
-
 ### Introduction
 
 This repository contains the code for reproducing the results in ICCV 2015 paper:
@@ -15,6 +14,8 @@ This repository contains the code for reproducing the results in ICCV 2015 paper
 	
 The code is tested on Ubuntu 14.04 using NVIDIA K40 GPU and MATLAB R2014b.
 
+Link to the [project page](http://vis-www.cs.umass.edu/bcnn).
+
 ### Fine-grained classification results
 
 
@@ -25,7 +26,7 @@ B-CNN [D,M]    | 84.1%        | 85.1%        | 83.9%   | 91.3%
 B-CNN [D,D]    | 84.0%        | 84.8%        | 84.1%   | 90.6%
 
 * Dataset details:
-	* Birds: [CUB-200-2011 dataset](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html). The birds + box uses object bounding-boxes both at training and test time.
+	* Birds: [CUB-200-2011 dataset](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html). Birds + box uses bounding-boxes at training and test time.
 	* Aircrafts: [FGVC aircraft dataset](http://www.robots.ox.ac.uk/~vgg/data/oid/)
 	* Cars: [Stanford cars dataset](http://ai.stanford.edu/~jkrause/cars/car_dataset.html)
 * These results are with domain specific fine-tuning. For more details see the updated [B-CNN tech report](http://arxiv.org/abs/1504.07889).
@@ -35,10 +36,8 @@ B-CNN [D,D]    | 84.0%        | 84.8%        | 84.1%   | 90.6%
 
 This code depends on [VLFEAT](http://www.vlfeat.org) and [MatConvNet](http://www.vlfeat.org/matconvnet). Follow instructions on their project pages to install them first. Our code is built on MatConvNet version `1.0-beta8`. Version `1.0-beta9` which includes speedup by `cudnn` also works. To retrieve a particular version of MatConvNet using git type:
 
-<pre>
->> git fetch --tags
->> git checkout tags/v1.0-beta8
-</pre>
+	>> git fetch --tags
+	>> git checkout tags/v1.0-beta8
       
 Once these are installed edit the `setup.m` to run the corresponding `setup` scripts.
 
@@ -63,11 +62,11 @@ The script `demo_test.m` takes an image and runs our pre-trained fine-grained bi
 
 See `run_experiments_bcnn_train.m` for fine-tuning a B-CNN model. Note that this code caches all the intermediate results during fine-tuning which takes about 200GB disk space.
 
-Here are the steps to fine-tuning a B-CNN(M,M) model:
+Here are the steps to fine-tuning a B-CNN(M,M) model on the Birds dataset:
 
-1. Download CUB-200-2011 dataset
-1. Edit opts.cubDir=CUBROOT in `model_setup.m`, CUBROOT is the location of cub dataset
-1. Download imagenet-vgg-m model
+1. Download `CUB-200-2011` dataset (see link above)
+1. Edit `opts.cubDir=CUBROOT` in `model_setup.m`, CUBROOT is the location of CUB dataset.
+1. Download `imagenet-vgg-m` model (see link above)
 1. Set the path of the model in `run_experiments_bcnn_train.m`. For example, set PRETRAINMODEL='data/model/imagenet-vgg-m.mat', to use the Oxford's VGG-M model trained on ImageNet LSVRC 2012 dataset. You also have to set the `bcnnmm.opts` to:
 
         bcnnmm.opts = {..
@@ -79,9 +78,9 @@ Here are the steps to fine-tuning a B-CNN(M,M) model:
            'shareWeight', true,...
         } ;
         
-The option `shareWeight=true` implies that the blinear model uses the same CNN to extract features resulting in a symmetric model. For assymetric models set `shareWeight=false`. Note that this roughly doubles the memory requirement.
+	The option `shareWeight=true` implies that the blinear model uses the same CNN to extract both features resulting in a symmetric model. For assymetric models set `shareWeight=false`. Note that this roughly doubles the GPU memory requirement.
 
-Once the fine-tuning is complete, you can train a linear SVM on the extracted features to evaluate the model. See `run_experiments.m` for training/testing using SVMs. You can simply set the MODELPATH to the location of the fine-tuned model by setting MODELPATH='data/ft-models/bcnn-cub-mm.mat' and the `bcnnmm.opts` to:
+1. Once the fine-tuning is complete, you can train a linear SVM on the extracted features to evaluate the model. See `run_experiments.m` for training/testing using SVMs. You can simply set the MODELPATH to the location of the fine-tuned model by setting MODELPATH='data/ft-models/bcnn-cub-mm.mat' and the `bcnnmm.opts` to:
 
         bcnnmm.opts = {..
            'type', 'bcnn', ...
@@ -91,11 +90,11 @@ Once the fine-tuning is complete, you can train a linear SVM on the extracted fe
            'layerb', 14,...
         } ;
         
-And type ``>> run_experiments`` on the MATLAB command line.
+1. And type ``>> run_experiments`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
 
 ### Running B-CNN on other datasets
 
-The code can be used for other classification datasets. You have to implement the corresponding `>> imdb = <dataset-name>_get_database()` function that returns the `imdb` structure in the right format. Take a look at the `cub_get_database.m` file as an example.
+The code can be used for other classification datasets as well. You have to implement the corresponding `>> imdb = <dataset-name>_get_database()` function that returns the `imdb` structure in the right format. Take a look at the `cub_get_database.m` file as an example.
 
 ### Acknowldgements
 
