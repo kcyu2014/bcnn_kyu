@@ -19,11 +19,11 @@ Link to the [project page](http://vis-www.cs.umass.edu/bcnn).
 ### Fine-grained classification results
 
 
-Method         | Birds 	   | Birds + box | Aircrafts | Cars
--------------- |:--------:|:----------:|:--------:|:------------:
-B-CNN [M,M]    | 78.1%        | 77.5%        | 77.9%   | 86.5%
-B-CNN [D,M]    | 84.1%        | 85.1%        | 83.9%   | 91.3%
-B-CNN [D,D]    | 84.0%        | 84.8%        | 84.1%   | 90.6%
+Method         | Birds 	    | Birds + box  | Aircrafts | Cars
+-------------- |:---------:|:------------:|:---------:|:-------:
+B-CNN [M,M]    | 78.1%     | 80.4%        | 77.9%     | 86.5%
+B-CNN [D,M]    | 84.1%     | 85.1%        | 83.9%     | 91.3%
+B-CNN [D,D]    | 84.0%     | 84.8%        | 84.1%     | 90.6%
 
 * Dataset details:
 	* Birds: [CUB-200-2011 dataset](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html). Birds + box uses bounding-boxes at training and test time.
