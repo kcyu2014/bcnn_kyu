@@ -46,9 +46,12 @@ The code implements the bilinear combination layer in symmetic and assymetic CNN
 
 ### Pre-trained models
 
-**ImageNet LSVRC 2012 pre-trained models:** Since we don't support the latest MatConvNet implementation, the pre-trained models download from MatConvNet page don't work properly here. We provide the links to download [vgg-m](http://vis-www.cs.umass.edu/bcnn/download/imagenet-vgg-m.mat) and [vgg-verydeep-16](http://vis-www.cs.umass.edu/bcnn/download/imagenet-vgg-verydeep-16.mat) in old format.
+**ImageNet LSVRC 2012 pre-trained models:** Since we don't support the latest MatConvNet implementation, the pre-trained models download from MatConvNet page don't work properly here. We provide the links to download [vgg-m](http://vis-www.cs.umass.edu/bcnn/models/imagenet-vgg-m.mat) and [vgg-verydeep-16](http://vis-www.cs.umass.edu/bcnn/models/imagenet-vgg-verydeep-16.mat) in old format.
 
-**Fine-tuned models:** We provide three B-CNN fine-trained models ([M,M], [D,M], and [D,D]) for each of CUB-200-2011, FGVC Aircraft and Cars dataset. Note that for [M,M] and [D,D], we run the symmetric model, where you can simply use the same network for both two streams. These can be downloaded [here](http://vis-www.cs.umass.edu/bcnn/download). You can download all the models by running `fetch_models.m`. The models will be stored in `data/models` directory.
+**Fine-tuned models:** We provide three B-CNN fine-trained models ([M,M], [D,M], and [D,D]) for each of CUB-200-2011, FGVC Aircraft and Cars dataset. Note that for [M,M] and [D,D], we run the symmetric model, where you can simply use the same network for both two streams. These can be downloaded individually [here](http://vis-www.cs.umass.edu/bcnn/models). 
+
+
+You can also download all the model files as a tar.gz [here](http://vis-www.cs.umass.edu/bcnn/models.tar.gz).
 
 ### Fine-grained datasets
 
@@ -56,13 +59,26 @@ To run experiments download the datasets from various places and edit the `model
 
 ### Classification demo
 
-The script `demo_test.m` takes an image and runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples of the class with highest score. Download our pre-trained [B-CNN [D,M]](http://vis-www.cs.umass.edu/bcnn/download/bcnn-cub-dm.zip) and [SVM](http://vis-www.cs.umass.edu/bcnn/download/svm_cub_vdm.mat) models for this demo and put them in the `data/models` directory. Choose your favorite bird images, edit lines 4 to 13 for your local setting and run the demo.
+The script `bird_demo` takes an image and runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples images of the class with the highest score. If you haven't already done so, download our pre-trained [B-CNN [D,M]](http://vis-www.cs.umass.edu/bcnn/models/bcnn-cub-dm.zip) and [SVM](http://vis-www.cs.umass.edu/bcnn/models/svm_cub_vdm.mat) models for this demo and put them in the `data/models` directory. You should see the following output when you run `bird_demo()`:
+
+	>> bird_demo();
+	0.09s to load imdb.
+	1.63s to load models into memory.
+	Top 5 prediction for test_image.jpg:
+	064.Ring_billed_Gull
+	059.California_Gull
+	147.Least_Tern
+	062.Herring_Gull
+	060.Glaucous_winged_Gull
+	3.80s to make predictions [GPU=0]
+
+To run it on your own images run `bird_demo('imgPath', 'favorite-bird.jpg');`. Classification roughlly takes 4s per image on my laptop on a CPU. On an NVIDIA K40 GPU with bigger batch sizes you should roughly get a throughput of 8 images/second with the `B-CNN [D,M]` model.
 
 ### Fine-tuning B-CNN models
 
 See `run_experiments_bcnn_train.m` for fine-tuning a B-CNN model. Note that this code caches all the intermediate results during fine-tuning which takes about 200GB disk space.
 
-Here are the steps to fine-tuning a B-CNN(M,M) model on the Birds dataset:
+Here are the steps to fine-tuning a B-CNN [M,M] model on the CUB dataset:
 
 1. Download `CUB-200-2011` dataset (see link above)
 1. Edit `opts.cubDir=CUBROOT` in `model_setup.m`, CUBROOT is the location of CUB dataset.
@@ -90,7 +106,7 @@ Here are the steps to fine-tuning a B-CNN(M,M) model on the Birds dataset:
            'layerb', 14,...
         } ;
         
-1. And type ``>> run_experiments`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
+1. And type ``>> run_experiments()`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
 
 ### Running B-CNN on other datasets
 

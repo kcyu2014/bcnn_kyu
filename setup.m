@@ -1,7 +1,4 @@
 % run /scratch1/tsungyulin/matlabToolbox/vlfeat-0.9.19/toolbox/vl_setup
-run vlfeat/toolbox/vl_setup
-run matconvnet/matlab/vl_setupnn
-addpath matconvnet/examples/
-addpath matlab-helpers
-% addpath liblinear-1.96/matlab
+run ../vlfeat/toolbox/vl_setup
+run ../matconvnet/matlab/vl_setupnn
 clear mex ;
