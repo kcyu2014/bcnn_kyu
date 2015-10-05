@@ -108,6 +108,15 @@ Here are the steps to fine-tuning a B-CNN [M,M] model on the CUB dataset:
         
 1. And type ``>> run_experiments()`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
 
+### Implementation details
+The code for bilinear CNN is implemented in the following MATLAB functions:
+
+1. `vl_bilinearnn()	`: This function extends `vl_simplenn()` of the MatConvNet library to include the bilinear layers (See function for details).
+1. `vl_nnbilinearpool()`: Bilinear feature pooling with outer product with itself.
+1. `vl_nnbilinearclpool()`: Bilinear feature pooling with outer product of two different features.
+1. `vl_nnsqrt()`: Signed square-root normalization.
+1. `vl_nnl2norm()`: L2 normalization.
+
 ### Running B-CNN on other datasets
 
 The code can be used for other classification datasets as well. You have to implement the corresponding `>> imdb = <dataset-name>_get_database()` function that returns the `imdb` structure in the right format. Take a look at the `cub_get_database.m` file as an example.
