@@ -109,13 +109,14 @@ Here are the steps to fine-tuning a B-CNN [M,M] model on the CUB dataset:
 1. And type ``>> run_experiments()`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
 
 ### Implementation details
-Asymmetric bcnn model is implemented using two networks whose feature outputs are bilinearly combined followed by a shallow network for normalization and computing softmax loss. This implementation runs forwoad and backward passing through two networks separatey. You can find the detail in `bcnn_train()`.
 
-When using the same network to extract both features, the symmetric bcnn models is implemented in a single network architecture consisting of `bilinearpool`, `sqrt`, and `l2norm` on the top of `convolutional` layer. This implementation is about twice fast and memory efficient than asymmetric implementaion.
+The asymmetric B-CNN model is implemented using two networks whose feature outputs are bilinearly combined followed by a shallow network for normalization and computing softmax loss. This implementation runs forward and backward passes through two networks separatey. You can find the details in `bcnn_train()`.
 
-The code for bilinear CNN is implemented in the following MATLAB functions:
+When using the same network is used to extract both features, the symmetric B-CNN model is implemented as a single network architecture consisting of `bilinearpool`, `sqrt`, and `l2norm` layers on the top of `convolutional` layers. This implementation is about twice as fast and memory efficient than asymmetric implementaion.
 
-1. `vl_bilinearnn()	`: This function extends `vl_simplenn()` of the MatConvNet library to include the bilinear layers (See function for details).
+The code for B-CNN is implemented in the following MATLAB functions:
+
+1. `vl_bilinearnn()	`: This extends `vl_simplenn()` of the MatConvNet library to include the bilinear layers.
 1. `vl_nnbilinearpool()`: Bilinear feature pooling with outer product with itself.
 1. `vl_nnbilinearclpool()`: Bilinear feature pooling with outer product of two different features.
 1. `vl_nnsqrt()`: Signed square-root normalization.
