@@ -1,7 +1,11 @@
 function res = vl_bilinearnn(net, x, dzdy, res, varargin)
-% VL_SIMPLENN  Evaluates a simple CNN
-%   RES = VL_SIMPLENN(NET, X) evaluates the convnet NET on data X.
-%   RES = VL_SIMPLENN(NET, X, DZDY) evaluates the convnent NET and its
+% VL_BILINEARNN is the extension of VL_SIMPLENN to suppport 
+%        1.vl_nnbilinearpool()
+%        2.vl_nnbilinearclpool()
+%        3.vl_nnsqrt()
+%        4.vl_nnl2norm()
+%   RES = VL_BILINEARENN(NET, X) evaluates the convnet NET on data X.
+%   RES = VL_BILINEARNN(NET, X, DZDY) evaluates the convnent NET and its
 %   derivative on data X and output derivative DZDY.
 %
 %   The network has a simple (linear) topology, i.e. the computational
@@ -98,6 +102,28 @@ function res = vl_bilinearnn(net, x, dzdy, res, varargin)
 %     - layer.type = 'softmaxloss'
 %     - layer.class: the ground-truth class.
 %
+%   Bilinear-pool layer::
+%       The bilinear-pool layer wraps VL_NNBILINEARPOOL(). It has fields:
+%
+%       - layer.type = 'bilinearpool'
+% 
+%   Bilinear-cross-layer-pool layer::
+%       The bilinear-cross-layer-pool layer wraps VL_NNBILINEARCLPOOL(). It has fields:
+%
+%       - layer.type = 'bilinearclpool'
+%       - layer.layer1: one input from the output of layer1
+%       - layer.layer2: one input from the output of layer2
+% 
+%   Square-root layer::
+%       The square-root layer wraps VL_NNSQRT(). It has fields:
+%
+%       - layer.type = 'sqrt'
+%
+%   L2 normalization layer::
+%       The l2 normalization layer wraps VL_NNL2NORM(). It has fields:
+%
+%       - layer.type = 'l2norm'
+%
 %   Custom layer::
 %     This can be used to specify custom layers.
 %
@@ -109,13 +135,12 @@ function res = vl_bilinearnn(net, x, dzdy, res, varargin)
 %     where res() is the struct array specified before. The second function is
 %     called as res(i) = backward(layer, res(i), res(i+1)). Note that the
 %     `layer` structure can contain additional fields if needed.
-
-
-% Copyright (C) 2014 Andrea Vedaldi.
+%
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
 % All rights reserved.
 %
-% This file is part of the VLFeat library and is made available under
-% the terms of the BSD license (see the COPYING file).
+% This file is modified from VL_SIMPLENN.m of MATCONVNET package
+% and is made available under the terms of the BSD license (see the COPYING file).
 
 opts.res = [] ;
 opts.conserveMemory = false ;
@@ -161,6 +186,7 @@ if nargin <= 3 || isempty(res)
     'backwardTime', num2cell(zeros(1,n+1))) ;
 end
 
+
 if(~isempty(x))
     res(1).x = x ;
 end
@@ -186,8 +212,6 @@ if doforward
                 res(i+1).x = vl_nnrelu(res(i).x) ;
             case 'noffset'
                 res(i+1).x = vl_nnnoffset(res(i).x, l.param) ;
-            case 'bilinear'
-                res(i+1).x = vl_nnbilinear(res(i).x);
             case 'bilinearpool'
                 res(i+1).x = vl_nnbilinearpool(res(i).x);
             case 'bilinearclpool'
@@ -238,23 +262,16 @@ if doder
     res(i).backwardTime = tic ;
     switch l.type
       case 'conv'
-%         [res(i).dzdx, res(i).dzdw{1}, res(i).dzdw{2}] = ...
-%             vl_nnconv(res(i).x, l.filters, l.biases, ...
-%                       res(i+1).dzdx, ...
-%                       'pad', l.pad, 'stride', l.stride) ;
         [backprop, res(i).dzdw{1}, res(i).dzdw{2}] = ...
             vl_nnconv(res(i).x, l.filters, l.biases, ...
                       res(i+1).dzdx, ...
                       'pad', l.pad, 'stride', l.stride) ;
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'pool'
-%         res(i).dzdx = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
-%           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
         backprop = vl_nnpool(res(i).x, l.pool, res(i+1).dzdx, ...
           'pad', l.pad, 'stride', l.stride, 'method', l.method) ;
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'normalize'
-%         res(i).dzdx = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
         backprop = vl_nnnormalize(res(i).x, l.param, res(i+1).dzdx) ;
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'softmax'
@@ -264,19 +281,12 @@ if doder
       case 'softmaxloss'
         res(i).dzdx = vl_nnsoftmaxloss(res(i).x, l.class, res(i+1).dzdx) ;
       case 'relu'
-%         res(i).dzdx = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
         backprop = vl_nnrelu(res(i).x, res(i+1).dzdx) ;
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'noffset'
-%         res(i).dzdx = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
         backprop = vl_nnnoffset(res(i).x, l.param, res(i+1).dzdx) ;
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
-      case 'bilinear'
-%         res(i).dzdx = vl_nnbilinear(res(i).x, res(i+1).dzdx);
-        backprop = vl_nnbilinear(res(i).x, res(i+1).dzdx);
-        res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'bilinearpool'
-%         res(i).dzdx = vl_nnbilinearpool(res(i).x, res(i+1).dzdx);
         backprop = vl_nnbilinearpool(res(i).x, res(i+1).dzdx);
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'bilinearclpool'
@@ -287,18 +297,9 @@ if doder
         res(l.layer2+1).dzdx = updateGradient(res(l.layer2+1).dzdx, y2);
       case 'sqrt'
         res(i).dzdx = vl_nnsqrt(res(i).x, res(i+1).dzdx);
-%         backprop = vl_nnsqrt(res(i).x, res(i+1).dzdx);
-%         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'l2norm'
         res(i).dzdx = vl_nnl2norm(res(i).x, res(i+1).dzdx);
-%         backprop = vl_nnl2norm(res(i).x, res(i+1).dzdx);
-%         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
       case 'dropout'
-%         if opts.disableDropout
-%           res(i).dzdx = res(i+1).dzdx ;
-%         else
-%           res(i).dzdx = vl_nndropout(res(i).x, res(i+1).dzdx, 'mask', res(i+1).aux) ;
-%         end
         if opts.disableDropout
           backprop = res(i+1).dzdx ;
         else
@@ -318,7 +319,7 @@ if doder
   end
 end
 
-
+% add up the gradient 
 function g = updateGradient(y, backprop)
 
 if isempty(y)

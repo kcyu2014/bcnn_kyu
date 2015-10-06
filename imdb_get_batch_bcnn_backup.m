@@ -1,28 +1,9 @@
 function imo = imdb_get_batch_bcnn(images, varargin)
-% imdb_get_batch_bcnn  Load, preprocess, and pack images for BCNN evaluation
-% For asymmetric model, the function preprocesses the images twice for two networks
-% separately.
-
-% OUTPUT
-% imo: a cell array where each element is a cell array of images.
-%       For symmetric bcnn model, numel(imo) will be 1 and imo{1} will be a
-%       cell array of images
-%       For asymmetric bcnn, numel(imo) will be 2. imo{1} is a cell array containing the preprocessed images for network A 
-%       Similarly, imo{2} is a cell array containing the preprocessed images for network B
-
-%
-% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
-% All rights reserved.
-%
-% This file is part of the BCNN and is made available under
-% the terms of the BSD license (see the COPYING file).
-%
-% This file modified from CNN_IMAGENET_GET_BATCH of MatConvNet
-
+% CNN_IMAGENET_GET_BATCH  Load, preprocess, and pack images for CNN evaluation
 
 for i=1:numel(varargin{1})
     opts(i).imageSize = [227, 227] ;
-    opts(i).border = [0, 0] ;
+    opts(i).border = [29, 29] ;
     opts(i).averageImage = [] ;
     opts(i).augmentation = 'none' ;
     opts(i).interpolation = 'bilinear' ;
@@ -30,32 +11,19 @@ for i=1:numel(varargin{1})
     opts(i).numThreads = 0 ;
     opts(i).prefetch = false ;
     opts(i).keepAspect = false;
+    opts(i).doResize = true;
     opts(i).scale = 1;
-    opts(i) = vl_argparse(opts(i), {varargin{1}(i),varargin{2:end}});
-    %opts(i) = vl_argparse(opts(i), varargin(2:end));
+    opts(i) = vl_argparse(opts(i), varargin{1}(i));
+    opts(i) = vl_argparse(opts(i), varargin(2:end));
     
-    if(i==1)
-		switch opts(i).augmentation
-		  case 'none'
-		    tfs = [.5 ; .5 ; 0 ];
-		  case 'f2'
-		    tfs = [...
-			0.5 0.5 ;
-			0.5 0.5 ;
-			  0   1];
-		end
-		
-		[~,augmentations] = sort(rand(size(tfs,2), numel(images)), 1) ;
-    end
-    
-    imo{i} = get_batch_fun(images, opts(i), augmentations, tfs);
+    imo{i} = get_batch_fun(images, opts(i));
     
 end
 
 
 
 
-function imo = get_batch_fun(images, opts, augmentations, tfs)
+function imo = get_batch_fun(images, opts)
 
 opts.imageSize(1:2) = round(opts.imageSize(1:2).*opts.scale);
 if(opts.scale ~= 1)
@@ -70,7 +38,26 @@ fetch = ischar(images{1}) ;
 % prefetch is used to load images in a separate thread
 prefetch = fetch & opts.prefetch ;
 
-
+switch opts.augmentation
+  case 'none'
+    tfs = [.5 ; .5 ; 0 ];
+  case 'f2'
+    tfs = [...
+	0.5 0.5 ;
+	0.5 0.5 ;
+	  0   1];
+  case 'f5'
+    tfs = [...
+      .5 0 0 1 1 .5 0 0 1 1 ;
+      .5 0 1 0 1 .5 0 1 0 1 ;
+       0 0 0 0 0  1 1 1 1 1] ;
+  case 'f25'
+    [tx,ty] = meshgrid(linspace(0,1,5)) ;
+    tfs = [tx(:)' ; ty(:)' ; zeros(1,numel(tx))] ;
+    tfs_ = tfs ;
+    tfs_(3,:) = 1 ;
+    tfs = [tfs,tfs_] ;
+end
 
 im = cell(1, numel(images)) ;
 if opts.numThreads > 0
@@ -88,6 +75,7 @@ if ~fetch
 end
 
 imo = cell(1, numel(images)*opts.numAugments) ;
+[~,augmentations] = sort(rand(size(tfs,2), numel(images)), 1) ;
 
 si=1;
 for i=1:numel(images)
@@ -104,12 +92,13 @@ for i=1:numel(images)
   end
   
   % resize
-      if opts.keepAspect
+  if opts.doResize
       w = size(imt,2) ;
       h = size(imt,1) ;
       factor = [(opts.imageSize(1)+opts.border(1))/h ...
           (opts.imageSize(2)+opts.border(2))/w];
       
+      if opts.keepAspect
           factor = max(factor) ;
           if any(abs(factor - 1) > 0.0001)
               
@@ -127,7 +116,22 @@ for i=1:numel(images)
               opts.imageSize(1:2), ...
               'method', opts.interpolation) ;          
       end
-
+      
+      %{
+      if opts.keepAspect
+          factor = max(factor) ;
+      end
+      if any(abs(factor - 1) > 0.0001)
+          imt = imresize(imt, ...
+              opts.imageSize(1:2), ...
+              'method', opts.interpolation) ;
+%           imt = imresize(imt, ...
+%               'scale', factor, ...
+%               'method', opts.interpolation) ;
+      end
+      
+      %}
+  end
   
   % crop & flip
   w = size(imt,2) ;
@@ -135,6 +139,10 @@ for i=1:numel(images)
   for ai = 1:opts.numAugments
     t = augmentations(ai,i) ;
     tf = tfs(:,t) ;
+%     dx = floor((w - opts.imageSize(2)) * tf(2)) ;
+%     dy = floor((h - opts.imageSize(1)) * tf(1)) ;
+%     sx = (1:opts.imageSize(2)) + dx ;
+%     sy = (1:opts.imageSize(1)) + dy ;
     sx = 1:w;
     if tf(3), sx = fliplr(sx) ; end
     imo{si} = imt(:,sx,:);
@@ -143,7 +151,7 @@ for i=1:numel(images)
 end
 
 
-if ~isempty(opts.averageImage)
+if ~isempty(opts.averageImage) && opts.doResize
     for i=1:numel(imo)
         imo{i} = bsxfun(@minus, imo{i}, opts.averageImage) ;
     end

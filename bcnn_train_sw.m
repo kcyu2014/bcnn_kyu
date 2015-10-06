@@ -1,10 +1,33 @@
 function [net, info] = bcnn_train_sw(net, imdb, getBatch, varargin)
-% CNN_TRAIN   Demonstrates training a CNN
-%    CNN_TRAIN() is an example learner implementing stochastic gradient
-%    descent with momentum to train a CNN for image classification.
+
+% BNN_TRAIN_SW   training a symmetric BCNN 
+%    BCNN_TRAIN() is an example learner implementing stochastic gradient
+%    descent with momentum to train a symmetric BCNN for image classification.
 %    It can be used with different datasets by providing a suitable
 %    getBatch function.
 
+% INPUT
+% net: a bcnn networks structure
+% getBatch: function to read a batch of images
+% imdb: imdb structure of a dataset
+
+% OUTPUT
+% net: an output of symmetric bcnn network after fine-tuning
+% info: log of training and validation
+
+% A symmetric BCNN consists of multiple layers of convolutions, pooling, and
+% nonlinear activation with bilinearpool, square-root and L2 normalization
+% and sofmaxloss on the top.
+
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
+
+% This function is modified from CNN_TRAIN of MatConvNet
+
+% basic setting
 opts.train = [] ;
 opts.val = [] ;
 opts.numEpochs = 300 ;
@@ -32,7 +55,7 @@ if isnan(opts.train), opts.train = [] ; end
 % -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
-
+% set hyperparameters
 for i=1:numel(net.layers)
   if ~strcmp(net.layers{i}.type,'conv'), continue; end
   net.layers{i}.filtersMomentum = zeros(size(net.layers{i}.filters), ...
@@ -53,6 +76,10 @@ for i=1:numel(net.layers)
   end
 end
 
+% -------------------------------------------------------------------------
+%                                                Move network to GPU or CPU
+% -------------------------------------------------------------------------
+
 if opts.useGpu
   net = vl_simplenn_move(net, 'gpu') ;
   for i=1:numel(net.layers)
@@ -62,11 +89,10 @@ if opts.useGpu
   end
 end
 
+
 % -------------------------------------------------------------------------
 %                                                        Train and validate
 % -------------------------------------------------------------------------
-
-rng(0) ;
 
 if opts.useGpu
   one = gpuArray(single(1)) ;
@@ -128,12 +154,13 @@ for epoch=1:opts.numEpochs
     batch_time = tic ;
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;        
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, true, opts.scale) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, opts.scale) ;
     
     if opts.prefetch
       nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train))) ;
-      getBatch(imdb, nextBatch, opts.dataAugmentation{1}, true, opts.scale) ;
+      getBatch(imdb, nextBatch, opts.dataAugmentation{1}, opts.scale) ;
     end
+    im = im{1};
     im = cat(4, im{:});
     if opts.useGpu
       im = gpuArray(im) ;
@@ -190,12 +217,13 @@ for epoch=1:opts.numEpochs
     batch = val(t:min(t+opts.batchSize-1, numel(val))) ;
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, true, opts.scale) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, opts.scale) ;
         
     if opts.prefetch
       nextBatch = val(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(val))) ;
-      getBatch(imdb, nextBatch, opts.dataAugmentation{2}, true, opts.scale) ;
+      getBatch(imdb, nextBatch, opts.dataAugmentation{2}, opts.scale) ;
     end
+    im = im{1};
     im = cat(4, im{:});
     if opts.useGpu
       im = gpuArray(im) ;

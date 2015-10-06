@@ -1,6 +1,13 @@
 function imdb_bcnn_train(imdb, opts, varargin)
 % Train a bilinear CNN model on a dataset supplied by imdb
 
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of BCNN and is made available 
+% under the terms of the BSD license (see the COPYING file).
+%
+% This file modified from IMDB_CNN_TRAIN of MatConvNet
 
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
@@ -51,7 +58,10 @@ if(shareWeights)
 
 else
     % fine-tuning the asymmetric B-CNN
-    fn = getBatchWrapper(net.neta.normalization, opts.numFetchThreads) ;    
+    norm_struct(1) = net.neta.normalization;
+    norm_struct(2) = net.netb.normalization;
+    fn = getBatchWrapper(norm_struct, opts.numFetchThreads) ;    
+%     fn = getBatchWrapper(net.neta.normalization, opts.numFetchThreads) ;    
     [net,info] = bcnn_train(net, fn, imdb, opts.train, 'conserveMemory', true, 'scale', opts.bcnnScale, 'momentum', opts.momentum) ;
     
     net.neta = vl_simplenn_move(net.neta, 'cpu');
@@ -88,18 +98,18 @@ save(fileName, 'layers', 'classes', 'normalization', '-v7.3');
 % -------------------------------------------------------------------------
 function fn = getBatchWrapper(opts, numThreads)
 % -------------------------------------------------------------------------
-fn = @(imdb,batch,augmentation, doResize, scale) getBatch(imdb,batch,augmentation,doResize, scale, opts,numThreads) ;
+fn = @(imdb,batch,augmentation, scale) getBatch(imdb, batch, augmentation, scale, opts, numThreads) ;
 
 % -------------------------------------------------------------------------
-function [im,labels] = getBatch(imdb, batch, augmentation, doResize, scale, opts, numThreads)
+function [im,labels] = getBatch(imdb, batch, augmentation, scale, opts, numThreads)
 % -------------------------------------------------------------------------
 images = strcat([imdb.imageDir '/'], imdb.images.name(batch)) ;
 im = imdb_get_batch_bcnn(images, opts, ...
                             'numThreads', numThreads, ...
-                            'prefetch', nargout == 0, 'augmentation', augmentation, 'doResize', doResize, 'scale', scale);
+                            'prefetch', nargout == 0, 'augmentation', augmentation, 'scale', scale);
 labels = imdb.images.label(batch) ;
-numAugments = numel(im)/numel(batch);
-labels = reshape(repmat(labels, numAugments, 1), 1, numel(im));
+numAugments = numel(im{1})/numel(batch);
+labels = reshape(repmat(labels, numAugments, 1), 1, numel(im{1}));
 
 
 
@@ -139,7 +149,7 @@ if ~encoderOpts.shareWeight
     
     assert(~isempty(encoderOpts.modela) && ~isempty(encoderOpts.modelb), 'at least one of the network is not specified')
     
-
+    % load the pre-trained models
     encoder.neta = load(encoderOpts.modela);
     encoder.neta.layers = encoder.neta.layers(1:encoderOpts.layera);
     encoder.netb = load(encoderOpts.modelb);
@@ -147,6 +157,7 @@ if ~encoderOpts.shareWeight
     encoder.regionBorder = 0.05;
     encoder.type = 'bcnn';
     encoder.normalization = 'sqrt_L2';
+    % move models to GPU
     if opts.useGpu
         encoder.neta = vl_simplenn_move(encoder.neta, 'gpu') ;
         encoder.netb = vl_simplenn_move(encoder.netb, 'gpu') ;
@@ -158,7 +169,7 @@ if ~encoderOpts.shareWeight
         encoder.neta.useGpu = false ;
         encoder.netb.useGpu = false ;
     end
-    
+    % set the bcnn_net structure
     net.neta = encoder.neta;
     net.netb = encoder.netb;
     net.neta.normalization.keepAspect = opts.keepAspect;
@@ -166,6 +177,7 @@ if ~encoderOpts.shareWeight
     
     netc.layers = {};
     
+    % get the bcnn feature dimension
     for i=numel(net.neta.layers):-1:1
         if strcmp(net.neta.layers{i}.type, 'conv')
             idx = i;
@@ -265,11 +277,13 @@ else
     net = load(encoderOpts.modela); % Load model if specified
     net.normalization.keepAspect = opts.keepAspect;
 
+    % truncate the network at the last layer whose output is combined with another
+    % layer's output to form the bcnn feature
     maxLayer = max(encoderOpts.layera, encoderOpts.layerb);
-
     net.layers = net.layers(1:maxLayer);
     
     
+    % get the bcnn feature dimension
     for i=encoderOpts.layera:-1:1
         if strcmp(net.layers{i}.type, 'conv')
             idx = i;
@@ -287,6 +301,8 @@ else
     end
     mapSize2 = numel(net.layers{idx}.biases);
     
+    
+    % stack bilinearpool, normalization, and softmax layers
     if(encoderOpts.layera==encoderOpts.layerb)
         net.layers{end+1} = struct('type', 'bilinearpool');
     else
@@ -326,20 +342,20 @@ else
         getBatchFn = getBatchWrapper(netInit.normalization, opts.numFetchThreads);
         
         
-        if exist(opts.inittrain.nonftbcnnDir)
-            load(fullfile(opts.inittrain.nonftbcnnDir, ['bcnn_nonft_', num2str(train(1), '%05d'), '.mat']));
-        else
+        if ~exist(opts.inittrain.nonftbcnnDir, 'dir')
+        
             mkdir(opts.inittrain.nonftbcnnDir)
             
             % compute and cache the bilinear cnn features
             for t=1:batchSize:numel(train)
                 fprintf('Initialization: extracting bcnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
                 batch = train(t:min(numel(train), t+batchSize-1));
-                [im, labels] = getBatchFn(imdb, batch, opts.dataAugmentation{1}, true, opts.bcnnScale) ;
+                [im, labels] = getBatchFn(imdb, batch, opts.dataAugmentation{1}, opts.bcnnScale) ;
                 if opts.train.prefetch
                     nextBatch = train(t+batchSize:min(t+2*batchSize-1, numel(train))) ;
-                    getBatcFnh(imdb, nextBatch, opts.dataAugmentation{1}, true, opts.bcnnScale) ;
+                    getBatcFn(imdb, nextBatch, opts.dataAugmentation{1}, opts.bcnnScale) ;
                 end
+                im = im{1};
                 im = cat(4, im{:});
                 if opts.train.useGpu
                     im = gpuArray(im) ;

@@ -3,6 +3,12 @@ function [code, varargout]= get_bcnn_features(neta, netb, im, varargin)
 %   This function extracts the binlinear combination of CNN features
 %   extracted from two different networks.
 
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
+
 nVargOut = max(nargout,1)-1;
 
 if nVargOut==1 
@@ -55,29 +61,24 @@ for k=1:numel(im)
     for s=1:numel(opts.scales)
         if min(crop_h,crop_w) * opts.scales(s) < min(borderA, borderB), continue ; end
         if sqrt(crop_h*crop_w) * opts.scales(s) > 1024, continue ; end
-
-        % resize the cropped image and extract features everywhere
-%         im_resized = imresize(im_cropped, opts.scales(s)) ;
-
-      
+        
+        
         if keepAspect
             w = size(im{k},2) ;
             h = size(im{k},1) ;
             factor = [imageSizeA(1)/h,imageSizeA(2)/w];
             
             
-          factor = max(factor)*opts.scales(s) ;
-          %if any(abs(factor - 1) > 0.0001)
-              
-              im_resized = imresize(single(im{k}), ...
-                  'scale', factor, ...
-                  'method', 'bilinear') ;
-          %end
-          
-          w = size(im_resized,2) ;
-          h = size(im_resized,1) ;
-          
-          im_resized = imcrop(im_resized, [fix((w-imageSizeA(1)*opts.scales(s))/2)+1, fix((h-imageSizeA(2)*opts.scales(s))/2)+1,...
+            factor = max(factor)*opts.scales(s) ;
+            
+            im_resized = imresize(single(im{k}), ...
+                'scale', factor, ...
+                'method', 'bilinear') ;
+            
+            w = size(im_resized,2) ;
+            h = size(im_resized,1) ;
+            
+            im_resized = imcrop(im_resized, [fix((w-imageSizeA(1)*opts.scales(s))/2)+1, fix((h-imageSizeA(2)*opts.scales(s))/2)+1,...
               round(imageSizeA(1)*opts.scales(s))-1, round(imageSizeA(2)*opts.scales(s))-1]);
         else
             im_resized = imresize(single(im{k}), round(imageSizeA([2 1])*opts.scales(s)), 'bilinear');
@@ -140,12 +141,6 @@ w1 = size(A,2) ;
 h1 = size(A,1) ;
 w2 = size(B,2) ;
 h2 = size(B,1) ;
-
-%figure(1); clf;
-%montage(reshape(A, [h1 w1 1 size(A,3)]));
-%figure(2); clf;
-%montage(reshape(B, [h2 w2 1 size(B,3)]));
-%pause;
 
 if w1*h1 <= w2*h2,
     %downsample B

@@ -1,5 +1,11 @@
 function model_train(varargin)
 
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
+
 [opts, imdb] = model_setup(varargin{:}) ;
 
 % -------------------------------------------------------------------------

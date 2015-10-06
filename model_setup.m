@@ -1,4 +1,12 @@
 function [opts, imdb] = model_setup(varargin)
+
+
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
+
 setup ;
 
 opts.seed = 1 ;
@@ -82,13 +90,7 @@ end
 
 for i = 1:numel(models)
     if ~exist(modelPath{i})
-%   if ~exist(fullfile('data/models', models{i}))
-        fprintf('downloading model %s\n', models{i}) ;
-        vl_xmkdir('data/models') ;
-        urlwrite(fullfile('http://www.vlfeat.org/matconvnet/models', models{i}),...
-            modelPath{i}) ;
-%     urlwrite(fullfile('http://www.vlfeat.org/matconvnet/models', models{i}),...
-%       fullfile('data/models', models{i})) ;
+        error(['cannot find model ', models{i}, '\n']) ;
     end
 end
 

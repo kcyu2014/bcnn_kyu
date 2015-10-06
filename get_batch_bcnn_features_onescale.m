@@ -2,6 +2,11 @@ function [code, varargout]= get_batch_bcnn_features_onescale(neta, netb, im, var
 % GET_BCNN_FEATURES  Get bilinear cnn features for an image
 %   This function extracts the binlinear combination of CNN features
 %   extracted from two different networks.
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
 
 nVargOut = max(nargout,1)-1;
 

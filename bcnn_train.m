@@ -1,11 +1,36 @@
 function [bcnn_net, info] = bcnn_train(bcnn_net, getBatch, imdb, varargin)
-% function [bcnn_net, info] = bcnn_train(bcnn_net, encoder, im, imdb, varargin)
-% CNN_TRAIN   Demonstrates training a CNN
-%    CNN_TRAIN() is an example learner implementing stochastic gradient
-%    descent with momentum to train a CNN for image classification.
+
+% BNN_TRAIN   training an asymmetric BCNN 
+%    BCNN_TRAIN() is an example learner implementing stochastic gradient
+%    descent with momentum to train an asymmetric BCNN for image classification.
 %    It can be used with different datasets by providing a suitable
 %    getBatch function.
 
+% INPUT
+% bcnn_net: a bcnn networks structure
+% getBatch: function to read a batch of images
+% imdb: imdb structure of a dataset
+
+% OUTPUT
+% bcnn_net: an output of asymmetric bcnn network after fine-tuning
+% info: log of training and validation
+
+% An asymmetric BCNN network BCNN_NET consist of three parts:
+% neta: Network A to extract features
+% netb: Network B to extract features
+% netc: consists of normalization layers and softmax layer to obtain the
+%       classification error and loss based on bcnn features combined from neta
+%       and netb
+
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
+
+% This function is modified from CNN_TRAIN of MatConvNet
+
+% basic setting
 opts.train = [] ;
 opts.val = [] ;
 opts.numEpochs = 300 ;
@@ -37,6 +62,7 @@ if isnan(opts.train), opts.train = [] ; end
 % -------------------------------------------------------------------------
 %                                                    Network initialization
 % -------------------------------------------------------------------------
+% set hyperparameters of network A
 neta = bcnn_net.neta;
 
 for i=1:numel(neta.layers)
@@ -58,7 +84,7 @@ for i=1:numel(neta.layers)
     neta.layers{i}.biasesWeightDecay = 1 ;
   end
 end
-
+% set hyperparameters of network A
 netb = bcnn_net.netb;
 for i=1:numel(netb.layers)
   if ~strcmp(netb.layers{i}.type,'conv'), continue; end
@@ -79,7 +105,7 @@ for i=1:numel(netb.layers)
     netb.layers{i}.biasesWeightDecay = 1 ;
   end
 end
-
+% set hyperparameters of network A
 netc = bcnn_net.netc;
 for i=1:numel(netc.layers)
   if ~strcmp(netc.layers{i}.type,'conv'), continue; end
@@ -161,8 +187,6 @@ end
 %                                                        Train and validate
 % -------------------------------------------------------------------------
 
-rng(0) ;
-
 if opts.useGpu
   one = gpuArray(single(1)) ;
 else
@@ -238,9 +262,9 @@ for epoch=1:opts.numEpochs
     fprintf('training: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(train)/opts.batchSize)) ;
      
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, false, opts.scale) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{1}, opts.scale) ;
     if opts.prefetch
-      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), false, opts.scale) ;
+      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), opts.scale) ;
       getBatch(imdb, nextBatch) ;
     end
     
@@ -250,11 +274,11 @@ for epoch=1:opts.numEpochs
         resc = [];
     end
     
-    [psi, ~, ~, resa, resb] = get_batch_bcnn_features_onescale(neta, netb, im, ...
+    % do forward passes on neta and netb to get bilinear CNN features
+    [psi, resa, resb] = bcnn_asym_forward(neta, netb, im, ...
         'regionBorder', opts.regionBorder, ...
-        'normalization', 'none', 'networkconservmemory', false, 'scales', opts.scale);
-
-
+        'normalization', 'none', 'networkconservmemory', false);
+    
     if opts.useGpu
         A = gather(resa(end).x);
         B = gather(resb(end).x);
@@ -275,13 +299,12 @@ for epoch=1:opts.numEpochs
     
     netc.layers{end}.class = labels ;
     
-%     resc = vl_bilinearnn(netc, psi, 1, resc, ...
-%       'conserveMemory', opts.conserveMemory, ...
-%       'sync', opts.sync) ;
+    % do forward and backward passes on netc after bilinear pool
     resc = vl_bilinearnn(netc, psi, 1, resc, ...
       'conserveMemory', false, ...
       'sync', opts.sync) ;
   
+    % compute the derivative with respected to the outputs of network A and network B
     dEdpsi = reshape(squeeze(resc(1).dzdx), size(A,3), size(B,3), size(A,4));
     [dA, dB] = arrayfun(@(x) compute_deriv_resp_AB(dEdpsi(:,:,x), A(:,:,:,x), B(:,:,:,x), opts.useGpu), 1:size(dEdpsi, 3), 'UniformOutput', false);
     dA = cat(4, dA{:});
@@ -289,17 +312,17 @@ for epoch=1:opts.numEpochs
 
 
 
-    % backprop
+    % backprop through network A
     resa = vl_bilinearnn(neta, [], dA, resa, ...
       'conserveMemory', opts.conserveMemory, ...
       'sync', opts.sync, 'doforward', false) ;
   
-  
+    % backprop through network B
     resb = vl_bilinearnn(netb, [], dB, resb, ...
       'conserveMemory', opts.conserveMemory, ...
       'sync', opts.sync, 'doforward', false) ;
   
-    % gradient step
+    % gradient step on network A
     for l=1:numel(neta.layers)
       if ~strcmp(neta.layers{l}.type, 'conv'), continue ; end
 
@@ -320,7 +343,7 @@ for epoch=1:opts.numEpochs
     end
     
     
-    % gradient step
+    % gradient step on network B
     for l=1:numel(netb.layers)
       if ~strcmp(netb.layers{l}.type, 'conv'), continue ; end
 
@@ -340,7 +363,7 @@ for epoch=1:opts.numEpochs
       netb.layers{l}.biases = netb.layers{l}.biases + netb.layers{l}.biasesMomentum ;
     end
    
-    % gradient step
+    % gradient step on network C
     for l=1:numel(netc.layers)
       if ~strcmp(netc.layers{l}.type, 'conv'), continue ; end
 
@@ -386,10 +409,10 @@ for epoch=1:opts.numEpochs
     fprintf('validation: epoch %02d: processing batch %3d of %3d ...', epoch, ...
             fix((t-1)/opts.batchSize)+1, ceil(numel(val)/opts.batchSize)) ;      
       
-    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, false, opts.scale) ;
+    [im, labels] = getBatch(imdb, batch, opts.dataAugmentation{2}, opts.scale) ;
     if opts.prefetch
-      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), false, opts.scale) ;
-      getBatch(imdb, nextBatch) ;
+      nextBatch = train(t+opts.batchSize:min(t+2*opts.batchSize-1, numel(train)), opts.scale) ;
+      getBatch(imdb, nextBatch, opts.dataAugmentation{2}, opts.scale) ;
     end
     
     if(exist('psi_n', 'var'))
@@ -398,8 +421,10 @@ for epoch=1:opts.numEpochs
         resc = [];
     end
     
-    [psi, ~, ~, ~, ~] = get_batch_bcnn_features_onescale(neta, netb, im, ...
-        'regionBorder', opts.regionBorder, 'normalization', 'none', 'scales', opts.scale);
+    % do forward pass on neta and netb to get bilinear CNN features
+    [psi, ~, ~] = bcnn_asym_forward(neta, netb, im, ...
+        'regionBorder', opts.regionBorder, 'normalization', 'none');
+    
     
     psi = cat(2, psi{:});
     
@@ -411,7 +436,7 @@ for epoch=1:opts.numEpochs
     
     
     netc.layers{end}.class = labels ;
-    
+    % do forward pass on netc after bilinear pool
     resc = vl_bilinearnn(netc, psi, [], resc, ...
       'conserveMemory', opts.conserveMemory, ...
       'sync', opts.sync) ;
@@ -499,33 +524,6 @@ switch opts.errorType
 end
 
 
-function psi = bilinear_pool(A, B)
-w1 = size(A,2) ;
-h1 = size(A,1) ;
-w2 = size(B,2) ;
-h2 = size(B,1) ;
-
-%figure(1); clf;
-%montage(reshape(A, [h1 w1 1 size(A,3)]));
-%figure(2); clf;
-%montage(reshape(B, [h2 w2 1 size(B,3)]));
-%pause;
-
-if w1*h1 <= w2*h2,
-    %downsample B
-    B = array_resize(B, w1, h1);
-    A = reshape(A, [w1*h1 size(A,3)]);
-else
-    %downsample A
-    A = array_resize(A, w2, h2);
-    B = reshape(A, [w2*h2 size(B,3)]);
-end
-
-% bilinear pool
-psi = A'*B;
-psi = psi(:);
-
-
 
 
 function Ar = array_resize(A, w, h)
@@ -538,30 +536,6 @@ for i = 1:numChannels,
     Ar(:,i) = Ai(:);
 end
 
-
-function dEdpsi = compute_deriv_resp_bcnnf(dEdz, psi_sqrt, psi_sqrt_norm, psi)
-
-
-thresh = 10^-8;
-
-C_bar = dEdz.*psi_sqrt;
-C_bar_sum = sum(C_bar, 1);
-C_bar = bsxfun(@plus, -1.*C_bar, C_bar_sum);
-
-yi_2_ynorm = bsxfun(@rdivide, psi_sqrt.^2, psi_sqrt_norm.^3);
-C_i = bsxfun(@plus, -yi_2_ynorm, 1./psi_sqrt_norm);
-% psi_einv(1:size(dEdz,1), 1:size(dEdz,2)) = thresh^(-0.5);
-% psi_einv(psi>thresh) = psi(psi>thresh).^(-0.5);
-
-psi_einv(1:size(dEdz,1), 1:size(dEdz,2)) = thresh^(-0.5);
-psi_einv(abs(psi)>thresh) = abs(psi(abs(psi)>thresh)).^(-0.5);
-
-C_i = 0.5.*dEdz.*C_i.*psi_einv;
-
-B_i = (-0.5).*bsxfun(@rdivide, psi_sqrt.*psi_einv, psi_sqrt_norm.^3);
-
-
-dEdpsi = B_i.*C_bar+C_i;
 
 function [dA, dB] = compute_deriv_resp_AB(dEdpsi, A, B, useGpu)
 

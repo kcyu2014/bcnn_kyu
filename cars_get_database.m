@@ -1,5 +1,10 @@
 function imdb = cars_get_database(carsDir, useCropped, ifval)
 % Automatically change directories
+% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
+% All rights reserved.
+%
+% This file is part of the BCNN and is made available under
+% the terms of the BSD license (see the COPYING file).
 if useCropped
     imdb.imageDir = fullfile(carsDir, 'images_cropped') ;
 else

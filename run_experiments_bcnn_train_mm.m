@@ -1,11 +1,5 @@
 function run_experiments_bcnn_train()
 
-% Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
-% All rights reserved.
-%
-% This file is part of the BCNN and is made available under
-% the terms of the BSD license (see the COPYING file).
-
 %fine tuning bcnn models
 if(~exist('data', 'dir'))
     mkdir('data');
@@ -42,8 +36,8 @@ end
     };
 
     
-  setupNameList = {'bcnnvdm'};
-  encoderList = {{bcnnvdm}}; 
+  setupNameList = {'bcnnmm'};
+  encoderList = {{bcnnmm}}; 
   datasetList = {{'cub', 1}};  
 
   for ii = 1 : numel(datasetList)
@@ -59,14 +53,15 @@ end
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'bcnn-mm', ...  % output folder name
-			  'batchSize', 64, ...
+			  'prefix', 'ft-bcnn-mm', ...  % output folder name
+			  'batchSize', 32, ...
               'bcnnScale', 2, ...       % specify the scale of input images
               'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
               'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
-			  'useGpu', 1, ...          %specify the GPU to use. 0 for using CPU
+			  'useGpu', 2, ...          %specify the GPU to use. 0 for using CPU
               'numEpochs', 100, ...
-              'momentum', 0.9);
+              'momentum', 0.9, ...
+              'keepAspect', true);
           imdb_bcnn_train(imdb, opts);
       end
     end
