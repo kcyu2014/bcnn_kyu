@@ -109,6 +109,10 @@ Here are the steps to fine-tuning a B-CNN [M,M] model on the CUB dataset:
 1. And type ``>> run_experiments()`` on the MATLAB command line. The results with be saved in the `opts.resultPath`.
 
 ### Implementation details
+Asymmetric bcnn model is implemented using two networks whose feature outputs are bilinearly combined followed by a shallow network for normalization and computing softmax loss. This implementation runs forwoad and backward passing through two networks separatey. You can find the detail in `bcnn_train()`.
+
+When using the same network to extract both features, the symmetric bcnn models is implemented in a single network architecture consisting of `bilinearpool`, `sqrt`, and `l2norm` on the top of `convolutional` layer. This implementation is about twice fast and memory efficient than asymmetric implementaion.
+
 The code for bilinear CNN is implemented in the following MATLAB functions:
 
 1. `vl_bilinearnn()	`: This function extends `vl_simplenn()` of the MatConvNet library to include the bilinear layers (See function for details).
