@@ -118,7 +118,7 @@ The code for B-CNN is implemented in the following MATLAB functions:
 
 1. `vl_bilinearnn()	`: This extends `vl_simplenn()` of the MatConvNet library to include the bilinear layers.
 1. `vl_nnbilinearpool()`: Bilinear feature pooling with outer product with itself.
-1. `vl_nnbilinearclpool()`: Bilinear feature pooling with outer product of two different features.
+1. `vl_nnbilinearclpool()`: Bilinear feature pooling with outer product of two different features. Current version only supports the same resolution of two feature outputs.
 1. `vl_nnsqrt()`: Signed square-root normalization.
 1. `vl_nnl2norm()`: L2 normalization.
 
