@@ -34,7 +34,7 @@ B-CNN [D,D]    | 84.0%     | 84.8%        | 84.1%     | 90.6%
 
 ### Installation
 
-This code depends on [VLFEAT](http://www.vlfeat.org) and [MatConvNet](http://www.vlfeat.org/matconvnet). Follow instructions on their project pages to install them first. Our code is built on MatConvNet version `1.0-beta8`. Version `1.0-beta9` which includes speedup by `cudnn` also works. To retrieve a particular version of MatConvNet using git type:
+This code depends on [VLFEAT](http://www.vlfeat.org) and [MatConvNet](http://www.vlfeat.org/matconvnet). Follow instructions on their project pages to install them first. Our code is built on MatConvNet version `1.0-beta8`. To retrieve a particular version of MatConvNet using git type:
 
 	>> git fetch --tags
 	>> git checkout tags/v1.0-beta8
@@ -112,7 +112,7 @@ Here are the steps to fine-tuning a B-CNN [M,M] model on the CUB dataset:
 
 The asymmetric B-CNN model is implemented using two networks whose feature outputs are bilinearly combined followed by a shallow network for normalization and computing softmax loss. This implementation runs forward and backward passes through two networks separatey. You can find the details in `bcnn_train()`.
 
-When using the same network is used to extract both features, the symmetric B-CNN model is implemented as a single network architecture consisting of `bilinearpool`, `sqrt`, and `l2norm` layers on the top of `convolutional` layers. This implementation is about twice as fast and memory efficient than asymmetric implementaion.
+When the same network is used to extract both features, the symmetric B-CNN model is implemented as a single network architecture consisting of `bilinearpool`, `sqrt`, and `l2norm` layers on the top of `convolutional` layers. This implementation is about twice as fast and memory efficient than asymmetric implementaion.
 
 The code for B-CNN is implemented in the following MATLAB functions:
 
