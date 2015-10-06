@@ -41,10 +41,11 @@ opts = vl_argparse(opts, varargin) ;
 im_resA = im{1};
 im_resB = im{2};
 
+N = numel(im_resA);
+
 im_resA = cat(4, im_resA{:});
 im_resB = cat(4, im_resB{:});
 
-N = numel(im_resA);
 resA = [] ;
 resB = [] ;
 code = cell(1, N);
