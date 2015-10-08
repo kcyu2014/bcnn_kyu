@@ -6,7 +6,7 @@ Created by Tsung-Yu Lin, Aruni RoyChowdhury and Subhransu Maji at UMass Amherst
 This repository contains the code for reproducing the results in ICCV 2015 paper:
 
 	@inproceedings{lin2015bilinear,
-        Author = {Tsung-Yu Lin, Aruni RoyChoudhury, and Subhransu Maji},
+        Author = {Tsung-Yu Lin, Aruni RoyChowdhury, and Subhransu Maji},
         Title = {Blinear CNNs for Fine-grained Visual Recognition},
         Booktitle = {International Conference on Computer Vision (ICCV)},
         Year = {2015}
@@ -46,7 +46,7 @@ The code implements the bilinear combination layer in symmetic and assymetic CNN
 
 ### Pre-trained models
 
-**ImageNet LSVRC 2012 pre-trained models:** Since we don't support the latest MatConvNet implementation, the pre-trained models download from MatConvNet page don't work properly here. We provide the links to download [vgg-m](http://vis-www.cs.umass.edu/bcnn/models/imagenet-vgg-m.mat) and [vgg-verydeep-16](http://vis-www.cs.umass.edu/bcnn/models/imagenet-vgg-verydeep-16.mat) in old format.
+**ImageNet LSVRC 2012 pre-trained models:** Since we don't support the latest MatConvNet implementation, the pre-trained models download from MatConvNet page don't work properly here. We provide the links to download [vgg-m](http://maxwell.cs.umass.edu/bcnn/models/imagenet-vgg-m.mat) and [vgg-verydeep-16](http://maxwell.cs.umass.edu/bcnn/models/imagenet-vgg-verydeep-16.mat) in old format.
 
 **Fine-tuned models:** We provide three B-CNN fine-trained models ([M,M], [D,M], and [D,D]) and SVM models trained on respective bcnn features for each of CUB-200-2011, FGVC Aircraft and Cars dataset. Note that for [M,M] and [D,D], we run the symmetric model, where you can simply use the same network for both two streams. These can be downloaded individually [here](http://maxwell.cs.umass.edu/bcnn/models). 
 
