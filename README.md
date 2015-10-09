@@ -59,7 +59,7 @@ To run experiments download the datasets from various places and edit the `model
 
 ### Classification demo
 
-The script `bird_demo` takes an image and runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples images of the class with the highest score. If you haven't already done so, download our pre-trained [B-CNN [D,M]](http://maxwell.cs.umass.edu/bcnn/models/bcnn-cub-dm.zip) and [SVM](http://maxwell.cs.umass.edu/bcnn/models/svm_cub_vdm.mat) models for this demo and put them in the `data/models` directory. You should see the following output when you run `bird_demo()`:
+The script `bird_demo` takes an image and runs our pre-trained fine-grained bird classifier to predict the top five species and shows some examples images of the class with the highest score. If you haven't already done so, download our pre-trained [B-CNN [D,M]](http://maxwell.cs.umass.edu/bcnn/models/bcnn-cub-dm) and [SVM](http://maxwell.cs.umass.edu/bcnn/models/svm_cub_vdm.mat) models for this demo and locate them in `data/models`. In addition, download the [CUB-200-2011](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html) dataset to `data/cub` as well. You can follow our default setting or edit `opts` in the script to point it to the models and dataset. If you have GPU installed on your machine, set `opts.useGpu=true` to speedup the computation. You should see the following output when you run `bird_demo()`:
 
 	>> bird_demo();
 	0.09s to load imdb.

@@ -9,7 +9,6 @@ opts.cubDir = 'data/cub';
 opts.useGpu = false;
 opts.svmPath = fullfile('data', 'models','svm_cub_vdm.mat');
 opts.imgPath = 'test_image.jpg';
-opts.cubDir = fullfile('data','cub');
 opts.regionBorder = 0.05 ;
 opts.normalization = 'sqrt_L2';
 opts.topK = 5; % Number of labels to display
