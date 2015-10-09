@@ -90,7 +90,7 @@ end
 
 for i = 1:numel(models)
     if ~exist(modelPath{i})
-        error(['cannot find model ', models{i}, '\n']) ;
+        error(['cannot find model ', models{i}]) ;
     end
 end
 
