@@ -7,7 +7,7 @@ This repository contains the code for reproducing the results in ICCV 2015 paper
 
 	@inproceedings{lin2015bilinear,
         Author = {Tsung-Yu Lin, Aruni RoyChowdhury, and Subhransu Maji},
-        Title = {Blinear CNNs for Fine-grained Visual Recognition},
+        Title = {Bilinear CNNs for Fine-grained Visual Recognition},
         Booktitle = {International Conference on Computer Vision (ICCV)},
         Year = {2015}
     }
