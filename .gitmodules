@@ -1,9 +1,9 @@
-[submodule "matlab-helpers"]
-	path = matlab-helpers
-	url = git@bitbucket.org:smaji/matlab-helpers.git
-[submodule "vlfeat"]
-	path = vlfeat
-	url = git@bitbucket.org:smaji/vlfeat.git
+[submodule "bcnn-package"]
+	path = bcnn-package
+	url = git@bitbucket.org:tsungyu/bcnn-package.git
 [submodule "matconvnet"]
 	path = matconvnet
-	url = git@bitbucket.org:smaji/matconvnet.git
+	url = https://github.com/vlfeat/matconvnet.git
+[submodule "vlfeat"]
+	path = vlfeat
+	url = https://github.com/vlfeat/vlfeat.git
