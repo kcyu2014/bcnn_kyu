@@ -1,12 +1,16 @@
 function run_experiments()
 
-% run svm trainin and testing 
 % Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
 % All rights reserved.
 %
 % This file is part of the BCNN and is made available under
 % the terms of the BSD license (see the COPYING file).
 
+
+% This code is used for testing different encoding schemes with svm
+
+
+%% fully connected pooling 
   rcnn.name = 'rcnn' ;
   rcnn.opts = {...
     'type', 'rcnn', ...
@@ -19,6 +23,7 @@ function run_experiments()
     'model', 'data/models/imagenet-vgg-verydeep-16.mat', ...
     'layer', 35} ;
 
+%% fisher vector CNN
   dcnn.name = 'dcnn' ;
   dcnn.opts = {...
     'type', 'dcnn', ...
@@ -33,12 +38,14 @@ function run_experiments()
     'layer', 30, ...
     'numWords', 64} ;
 
+%% fisher vector SIFT
   dsift.name = 'dsift' ;
   dsift.opts = {...
     'type', 'dsift', ...
     'numWords', 256, ...
     'numPcaDimensions', 80} ;
 
+%% bilinear pooling CNN
   bcnnmm.name = 'bcnnmm' ;
   bcnnmm.opts = {...
     'type', 'bcnn', ...
@@ -67,7 +74,7 @@ function run_experiments()
     };
   
 
-  setupNameList = {'rcnn', 'dcnn', 'bcnnmm'};   % list of diffenet models to train and test
+  setupNameList = {'rcnn', 'dcnn', 'bcnnmm'};   % list of models to train and test
   encoderList = {{rcnn}, {dcnn}, {bcnnmm}};
   datasetList = {{'cub', 1}};
 
@@ -82,11 +89,12 @@ function run_experiments()
     end
     for jj = 1 : numSplits
       for ee = 1: numel(encoderList)
+        % train and test the model
         model_train(...
           'dataset', dataset, ...
           'seed', jj, ...
           'encoders', encoderList{ee}, ...
-          'prefix', 'exp', ...
+          'prefix', 'exp', ...              % name of the output folder
           'suffix', setupNameList{ee}, ...
           'printDatasetInfo', ee == 1, ...
           'useGpu', 1, ...

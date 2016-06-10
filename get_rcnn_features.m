@@ -83,5 +83,4 @@ function reg = getImage(opts, im, regionSize, keepAspect)
     else
         reg = imresize(im, [regionSize, regionSize], 'bicubic') ;
     end
-%     reg = imresize(im, [regionSize, regionSize], 'bicubic') ;
 end

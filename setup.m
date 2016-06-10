@@ -1,5 +1,11 @@
-% run /scratch1/tsungyulin/matlabToolbox/vlfeat-0.9.19/toolbox/vl_setup
+% setup vlfeat
 run ./vlfeat/toolbox/vl_setup
+
+% setup matconvnet
 run ./matconvnet/matlab/vl_setupnn
-addpath matconvnet/examples/
+addpath ./matconvnet/examples/
+
+% add bcnn package
+addpath ./bcnn-package/
+
 clear mex ;

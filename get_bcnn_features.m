@@ -1,7 +1,6 @@
 function [code, varargout]= get_bcnn_features(neta, netb, im, varargin)
-% GET_BCNN_FEATURES  Get bilinear cnn features for an image
-%   This function extracts the binlinear combination of CNN features
-%   extracted from two different networks.
+% GET_BCNN_FEATURES  Get bilinear cnn features for images using neta and
+% netb
 
 % Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
 % All rights reserved.
@@ -62,7 +61,7 @@ for k=1:numel(im)
         if min(crop_h,crop_w) * opts.scales(s) < min(borderA, borderB), continue ; end
         if sqrt(crop_h*crop_w) * opts.scales(s) > 1024, continue ; end
         
-        
+        % resize and crop images
         if keepAspect
             w = size(im{k},2) ;
             h = size(im{k},1) ;
@@ -83,28 +82,37 @@ for k=1:numel(im)
         else
             im_resized = imresize(single(im{k}), round(imageSizeA([2 1])*opts.scales(s)), 'bilinear');
         end
+        
+        % subtract mean images
         im_resizedA = bsxfun(@minus, im_resized, averageColourA) ;
         im_resizedB = bsxfun(@minus, im_resized, averageColourB) ;
+        
+        
         if nVargOut==2
             im_resA{k} = im_resizedA;
             im_resB{k} = im_resizedB;
         end
+        
+        % mover to GPU
         if neta.useGpu
             im_resizedA = gpuArray(im_resizedA) ;
             im_resizedB = gpuArray(im_resizedB) ;
         end
+        
+        % pass through networks
         resA = vl_simplenn(neta, im_resizedA, [], resA, ...
                             'conserveMemory', true, 'sync', true);
         resB = vl_simplenn(netb, im_resizedB, [], resB, ...
                             'conserveMemory', true, 'sync', true);
         A = gather(resA(end).x);
         B = gather(resB(end).x);
-
+        
+        % bilinearly pool the features
         psi{s} = bilinear_pool(A,B);
         feat_dim = max(cellfun(@length,psi));
         code{k} = zeros(feat_dim, 1);
     end
-    % pool across scales
+    % sum pool across scales
     for s=1:numel(opts.scales),
         if ~isempty(psi{s}),
             code{k} = code{k} + psi{s};
@@ -112,6 +120,7 @@ for k=1:numel(im)
     end
     assert(~isempty(code{k}));
 end
+
 % square-root and l2 normalize (like: Improved Fisher?)
 switch opts.normalization
     case 'sqrt_L2'

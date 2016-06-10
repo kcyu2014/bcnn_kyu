@@ -6,7 +6,8 @@ function run_experiments_bcnn_train()
 % This file is part of the BCNN and is made available under
 % the terms of the BSD license (see the COPYING file).
 
-%fine tuning bcnn models
+% This code is used for fine-tuning bilinear model
+
 if(~exist('data', 'dir'))
     mkdir('data');
 end
@@ -42,8 +43,8 @@ end
     };
 
     
-  setupNameList = {'bcnnvdm'};
-  encoderList = {{bcnnvdm}}; 
+  setupNameList = {'bcnnmm'};
+  encoderList = {{bcnnmm}}; 
   datasetList = {{'cub', 1}};  
 
   for ii = 1 : numel(datasetList)
@@ -59,15 +60,21 @@ end
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'ft-bcnn-dm', ...  % output folder name
-			  'batchSize', 1, ...
-              'bcnnScale', 2, ...       % specify the scale of input images
-              'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
-              'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
-			  'useGpu', 1, ...          %specify the GPU to use. 0 for using CPU
-              'numEpochs', 45, ...
-              'momentum', 0.3);
-          imdb_bcnn_train(imdb, opts);
+			  'prefix', 'checkgpu', ...  % output folder name
+			  'batchSize', 128, ...
+			  'bcnnScale', 2, ...       % specify the scale of input images
+			  'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
+			  'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
+			  'useGpu', [1, 3], ...          %specify the GPU to use. 0 for using CPU
+              'learningRate', 0.001, ...
+			  'numEpochs', 100, ...
+			  'momentum', 0.9, ...
+			  'keepAspect', true, ...
+			  'printDatasetInfo', true, ...
+			  'fromScratch', false, ...
+			  'rgbJitter', false, ...
+			  'useVal',true);
+          imdb_bcnn_train_dag(imdb, opts);
       end
     end
   end
