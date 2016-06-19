@@ -20,27 +20,10 @@ if ~exist(opts.resultPath)
     else
       if exist(opts.encoders{i}.path)
         encoder = load(opts.encoders{i}.path) ;
+        if isa(encoder.net, 'dagnn.DagNN'), encoder.net = dagnn.DagNN.loadobj(encoder.net); end
         if isfield(encoder, 'net')
-            if opts.useGpu
-              encoder.net = vl_simplenn_move(encoder.net, 'gpu') ;
-              encoder.net.useGpu = true ;
-            else
-              encoder.net = vl_simplenn_move(encoder.net, 'cpu') ;
-              encoder.net.useGpu = false ;
-            end
-        end
-        if isfield(encoder, 'neta')
-            if opts.useGpu
-              encoder.neta = vl_simplenn_move(encoder.neta, 'gpu') ;
-              encoder.netb = vl_simplenn_move(encoder.netb, 'gpu') ;
-              encoder.neta.useGpu = true ;
-              encoder.netb.useGpu = true ;
-            else
-              encoder.neta = vl_simplenn_move(encoder.neta, 'cpu') ;
-              encoder.netb = vl_simplenn_move(encoder.netb, 'cpu') ;
-              encoder.neta.useGpu = false ;
-              encoder.netb.useGpu = false ;
-            end
+            if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
+            encoder.net = net_move_to_device(encoder.net, device);
         end
       else
         opts.encoders{i}.opts = horzcat(opts.encoders{i}.opts);
@@ -49,10 +32,11 @@ if ~exist(opts.resultPath)
         encoder = encoder_train_from_images(...
           imdb, imdb.images.id(train), ...
           opts.encoders{i}.opts{:}, ...
-          'useGpu', opts.useGpu) ;
+          'useGpu', opts.useGpu, ...
+          'scale', opts.imgScale) ;
         encoder_save(encoder, opts.encoders{i}.path) ;
       end
-      code = encoder_extract_for_images(encoder, imdb, imdb.images.id, 'dataAugmentation', opts.dataAugmentation) ;
+      code = encoder_extract_for_images(encoder, imdb, imdb.images.id, 'dataAugmentation', opts.dataAugmentation, 'scale', opts.imgScale) ;
       savefast(opts.encoders{i}.codePath, 'code') ;
     end
     psi{i} = code ;
@@ -217,6 +201,7 @@ opts.batchSize = 64 ;
 opts.maxNumLocalDescriptorsReturned = 500 ;
 opts.concatenateCode = true;
 opts.dataAugmentation = 'none';
+opts.scale = 1;
 opts = vl_argparse(opts, varargin) ;
 
 [~,imageSel] = ismember(imageIds, imdb.images.id) ;
@@ -233,7 +218,7 @@ numWorkers = matlabpool('size') ;
 %parfor (b = 1:numel(batches), numWorkers)
 for b = numel(batches):-1:1
   batchResults{b} = get_batch_results(imdb, imageIds, batches{b}, ...
-                        encoder, opts.maxNumLocalDescriptorsReturned, opts.dataAugmentation) ;
+                        encoder, opts.maxNumLocalDescriptorsReturned, opts.dataAugmentation, opts.scale) ;
 end
 
 
@@ -265,7 +250,7 @@ end
 % - an array of FV descriptors, one per segment
 
 % -------------------------------------------------------------------------
-function result = get_batch_results(imdb, imageIds, batch, encoder, maxn, dataAugmentation)
+function result = get_batch_results(imdb, imageIds, batch, encoder, maxn, dataAugmentation, scale)
 % -------------------------------------------------------------------------
 m = numel(batch) ;
 im = cell(1, m) ;
@@ -304,31 +289,30 @@ if ~isfield(encoder, 'numSpatialSubdivisions')
   encoder.numSpatialSubdivisions = 1 ;
 end
 switch encoder.type
-  case 'rcnn'
-    code_ = get_rcnn_features(encoder.net, ...
-      im, ...
-      'regionBorder', encoder.regionBorder) ;
-  case 'dcnn'
-    gmm = [] ;
-    if isfield(encoder, 'covariances'), gmm = encoder ; end
-    code_ = get_dcnn_features(encoder.net, ...
-      im, ...
-      'encoder', gmm, ...
-      'numSpatialSubdivisions', encoder.numSpatialSubdivisions, ...
-      'maxNumLocalDescriptorsReturned', maxn) ;
-  case 'dsift'
-    gmm = [] ;
-    if isfield(encoder, 'covariances'), gmm = encoder ; end
-    code_ = get_dcnn_features([], im, ...
-      'useSIFT', true, ...
-      'encoder', gmm, ...
-      'numSpatialSubdivisions', encoder.numSpatialSubdivisions, ...
-      'maxNumLocalDescriptorsReturned', maxn) ;
-   case 'bcnn'
-       code_ = get_bcnn_features(encoder.neta, encoder.netb,...
-         im, ...
-        'regionBorder', encoder.regionBorder, ...
-        'normalization', encoder.normalization);
+    case 'rcnn'
+        net = vl_simplenn_tidy(encoder.net);
+        net.useGpu = encoder.net.useGpu;
+        code_ = get_rcnn_features(encoder.net, ...
+            im, ...
+            'regionBorder', encoder.regionBorder) ;
+    case 'dcnn'
+        gmm = [] ;
+        if isfield(encoder, 'covariances'), gmm = encoder ; end
+        code_ = get_dcnn_features(encoder.net, ...
+            im, ...
+            'encoder', gmm, ...
+            'numSpatialSubdivisions', encoder.numSpatialSubdivisions, ...
+            'maxNumLocalDescriptorsReturned', maxn, 'scales', scale) ;
+    case 'dsift'
+        gmm = [] ;
+        if isfield(encoder, 'covariances'), gmm = encoder ; end
+        code_ = get_dcnn_features([], im, ...
+            'useSIFT', true, ...
+            'encoder', gmm, ...
+            'numSpatialSubdivisions', encoder.numSpatialSubdivisions, ...
+            'maxNumLocalDescriptorsReturned', maxn) ;
+    case 'bcnn'
+        code_ = get_bcnn_features(encoder.net, im, 'scales', scale);
 end
 result.code = code_ ;
 
@@ -352,6 +336,7 @@ opts.renormalize = false ;
 opts.numWords = 64 ;
 opts.numSpatialSubdivisions = 1 ;
 opts.normalization = 'sqrt_L2';
+opts.scale = 1;
 opts = vl_argparse(opts, varargin) ;
 
 encoder.type = opts.type ;
@@ -366,31 +351,65 @@ end
 switch opts.type
     case {'rcnn', 'dcnn'}
         encoder.net = load(opts.model) ;
-        encoder.net.layers = encoder.net.layers(1:opts.layer) ;
+        if ~isempty(opts.layer)
+            encoder.net.layers = encoder.net.layers(1:opts.layer) ;
+        end
         if opts.useGpu
+            encoder.net = vl_simplenn_tidy(encoder.net);
             encoder.net = vl_simplenn_move(encoder.net, 'gpu') ;
             encoder.net.useGpu = true ;
         else
+            encoder.net = vl_simplenn_tidy(encoder.net);
             encoder.net = vl_simplenn_move(encoder.net, 'cpu') ;
             encoder.net.useGpu = false ;
         end
    case 'bcnn'
        encoder.normalization = opts.normalization;
-       encoder.neta = load(opts.modela);
-       encoder.neta.layers = encoder.neta.layers(1:opts.layera);
-       encoder.netb = load(opts.modelb);
-       encoder.netb.layers = encoder.netb.layers(1:opts.layerb);
-       if opts.useGpu, 
-           encoder.neta = vl_simplenn_move(encoder.neta, 'gpu');
-           encoder.netb = vl_simplenn_move(encoder.netb, 'gpu');
-           encoder.neta.useGpu = true;
-           encoder.netb.useGpu = true;
-       else
-           encoder.neta = vl_simplenn_move(encoder.neta, 'cpu');
-           encoder.netb = vl_simplenn_move(encoder.netb, 'cpu');
-           encoder.neta.useGpu = false;
-           encoder.netb.useGpu = false;
-       end           
+        encoder.neta = load(opts.modela);
+        if isfield(encoder.neta, 'net')
+            encoder.neta = encoder.neta.net;
+        end
+        
+        if ~isempty(opts.modelb)
+            assert(~isempty(opts.layerb), 'layerb is not specified')
+            encoder.netb = load(opts.modelb);
+            if isfield(encoder.netb, 'net')
+                encoder.netb = encoder.netb.net;
+            end
+            encoder.netb.layers = encoder.netb.layers(1:opts.layerb);
+        end
+        
+        if ~isempty(opts.layera)
+            encoder.layera = opts.layera;
+            maxLayer = opts.layera;
+            if ~isempty(opts.layerb) && isempty(opts.modelb)
+                maxLayer = max(maxLayer, opts.layerb);
+                encoder.layerb = opts.layerb;
+            end
+            encoder.neta.layers = encoder.neta.layers(1:maxLayer);
+        end
+        
+        if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
+        
+        encoder.neta = net_move_to_device(encoder.neta, device);
+        if isfield(encoder, 'netb')
+            encoder.netb = net_move_to_device(encoder.netb, device);
+        end
+        
+        encoder.net = initializeNetFromEncoder(encoder);
+        rmFields = {'neta', 'netb', 'layera', 'layerb'};
+        rmIdx = find(ismember(rmFields, fieldnames(encoder)));
+        for i=1:numel(rmIdx)
+            encoder = rmfield(encoder, rmFields{rmIdx(i)});
+        end
+        if isa(encoder.net, 'dagnn.DagNN')
+            encoder.net.mode = 'test';
+        else
+            encoder.net = vl_simplenn_tidy(encoder.net);
+            if opts.useGpu
+                encoder.net.useGpu = true;
+            end
+        end        
 end
 
 switch opts.type
@@ -400,7 +419,7 @@ end
 
 % Step 0: sample descriptors
 fprintf('%s: getting local descriptors to train GMM\n', mfilename) ;
-code = encoder_extract_for_images(encoder, imdb, imageIds, 'concatenateCode', false) ;
+code = encoder_extract_for_images(encoder, imdb, imageIds, 'concatenateCode', false, 'scale', opts.scale) ;
 descrs = cell(1, numel(code)) ;
 numImages = numel(code);
 numDescrsPerImage = floor(encoder.numWords * opts.numSamplesPerWord / numImages);

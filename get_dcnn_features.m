@@ -27,7 +27,7 @@ opts = vl_argparse(opts, varargin) ;
 if isempty(net)
     keepAspect = true;
 else
-    keepAspect = net.normalization.keepAspect;
+    keepAspect = net.meta.normalization.keepAspect;
 end
 
 if opts.useSIFT
@@ -42,11 +42,11 @@ else
   for l=numel(net.layers):-1:1
     x=(x-1)*info.stride(2,l)-info.pad(2,l)+1 ;
   end
-  offset = round(x + info.receptiveField(end)/2 - 0.5);
+  offset = round(x + info.receptiveFieldSize(end)/2 - 0.5);
   stride = prod(info.stride(1,:)) ;
-  border = round(info.receptiveField(end)/2+1) ;
-  averageColour = mean(mean(net.normalization.averageImage,1),2) ;
-  imageSize = net.normalization.imageSize;
+  border = round(info.receptiveFieldSize(end)/2+1) ;
+  averageColour = mean(mean(net.meta.normalization.averageImage,1),2) ;
+  imageSize = net.meta.normalization.imageSize;
 end
 
 if ~iscell(im)

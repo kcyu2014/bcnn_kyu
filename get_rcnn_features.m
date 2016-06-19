@@ -25,7 +25,7 @@ resetCache() ;
     function flushCache()
         if cache.numCached == 0, return ; end
         images = cat(4, cache.images{:}) ;
-        images = bsxfun(@minus, images, net.normalization.averageImage) ;
+        images = bsxfun(@minus, images, net.meta.normalization.averageImage) ;
         if net.useGpu
             images = gpuArray(images) ;
         end
@@ -52,7 +52,7 @@ resetCache() ;
 
     code = {} ;
     for k=1:numel(im)
-        appendCache(k, getImage(opts, single(im{k}), net.normalization.imageSize(1), net.normalization.keepAspect));
+        appendCache(k, getImage(opts, single(im{k}), net.meta.normalization.imageSize(1), net.meta.normalization.keepAspect));
     end
     flushCache() ;
 end

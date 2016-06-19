@@ -1,6 +1,7 @@
-function [code, varargout]= get_bcnn_features(neta, netb, im, varargin)
-% GET_BCNN_FEATURES  Get bilinear cnn features for images using neta and
-% netb
+    function code= get_bcnn_features(net, im, varargin)
+% GET_BCNN_FEATURES  Get bilinear cnn features for an image
+%   This function extracts the binlinear combination of CNN features
+%   extracted from two different networks.
 
 % Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
 % All rights reserved.
@@ -22,21 +23,26 @@ opts.regionBorder = 0.05;
 opts.normalization = 'sqrt_L2';
 opts = vl_argparse(opts, varargin) ;
 
-% get parameters of the network
-info = vl_simplenn_display(neta) ;
-borderA = round(info.receptiveField(end)/2+1) ;
-averageColourA = mean(mean(neta.normalization.averageImage,1),2) ;
-imageSizeA = neta.normalization.imageSize;
+% % get parameters of the network
+isDag = isa(net, 'dagnn.DagNN');
+border = getBorder(net);
+isTwoNet = false;
+if isDag
+    keepAspect = net.meta.meta1.normalization.keepAspect;
+    averageColourA = mean(mean(net.meta.meta1.normalization.averageImage,1),2) ;
+    imageSizeA = net.meta.meta1.normalization.imageSize;
+    if isfield(net.meta, 'meta2')
+        isTwoNet = true;
+        averageColourB = mean(mean(net.meta.meta2.normalization.averageImage,1),2) ;
+        imageSizeB = net.meta.meta2.normalization.imageSize;
+    end
+else
+    keepAspect = net.meta.normalization.keepAspect;
+    averageColourA = mean(mean(net.meta.normalization.averageImage,1),2) ;
+    imageSizeA = net.meta.normalization.imageSize;
+end
 
-info = vl_simplenn_display(netb) ;
-borderB = round(info.receptiveField(end)/2+1) ;
-averageColourB = mean(mean(netb.normalization.averageImage,1),2) ;
-imageSizeB = netb.normalization.imageSize;
-
-keepAspect = neta.normalization.keepAspect;
-
-assert(all(imageSizeA == imageSizeB));
-assert(neta.normalization.keepAspect==netb.normalization.keepAspect);
+% assert(all(imageSizeA == imageSizeB));
 
 if ~iscell(im)
   im = {im} ;
@@ -50,69 +56,51 @@ if nVargOut==2
 end
 % for each image
 for k=1:numel(im)
-    im_cropped = imresize(single(im{k}), imageSizeA([2 1]), 'bilinear');
-    crop_h = size(im_cropped,1) ;
-    crop_w = size(im_cropped,2) ;
-    resA = [] ;
-    resB = [] ;
+    im_croppedA = imresize(single(im{k}), imageSizeA([2 1]), 'bilinear');
+    crop_hA = size(im_croppedA,1) ;    crop_wA = size(im_croppedA,2) ;
+    if isTwoNet
+        im_croppedB = imresize(single(im{k}), imageSizeB([2 1]), 'bilinear');
+        crop_hB = size(im_croppedB,1) ;    crop_wB = size(im_croppedB,2) ;
+    end
+    
     psi = cell(1, numel(opts.scales));
+    
     % for each scale
     for s=1:numel(opts.scales)
-        if min(crop_h,crop_w) * opts.scales(s) < min(borderA, borderB), continue ; end
-        if sqrt(crop_h*crop_w) * opts.scales(s) > 1024, continue ; end
         
-        % resize and crop images
-        if keepAspect
-            w = size(im{k},2) ;
-            h = size(im{k},1) ;
-            factor = [imageSizeA(1)/h,imageSizeA(2)/w];
-            
-            
-            factor = max(factor)*opts.scales(s) ;
-            
-            im_resized = imresize(single(im{k}), ...
-                'scale', factor, ...
-                'method', 'bilinear') ;
-            
-            w = size(im_resized,2) ;
-            h = size(im_resized,1) ;
-            
-            im_resized = imcrop(im_resized, [fix((w-imageSizeA(1)*opts.scales(s))/2)+1, fix((h-imageSizeA(2)*opts.scales(s))/2)+1,...
-              round(imageSizeA(1)*opts.scales(s))-1, round(imageSizeA(2)*opts.scales(s))-1]);
+        im_resizedA = preprocess_image(im{k}, keepAspect, imageSizeA, averageColourA, opts.scales(s));
+        if isTwoNet
+            im_resizedB = preprocess_image(im{k}, keepAspect, imageSizeB, averageColourB, opts.scales(s));
+        end
+        
+        if isDag
+            if strcmp(net.device, 'gpu')
+                im_resizedA = gpuArray(im_resizedA);
+            end
+            inputs = {'input', im_resizedA, 'netb_input', im_resizedB};
+            if isTwoNet
+                if strcmp(net.device, 'gpu')
+                    im_resizedB = gpuArray(im_resizedB);
+                end
+                inputs{end+1} = 'netb_input';
+                inputs{end+1} = im_resizedB;
+            end
+            net.eval(inputs);
+            feat = net.vars(net.getVarIndex('l_1')).value;
         else
-            im_resized = imresize(single(im{k}), round(imageSizeA([2 1])*opts.scales(s)), 'bilinear');
-        end
-        
-        % subtract mean images
-        im_resizedA = bsxfun(@minus, im_resized, averageColourA) ;
-        im_resizedB = bsxfun(@minus, im_resized, averageColourB) ;
-        
-        
-        if nVargOut==2
-            im_resA{k} = im_resizedA;
-            im_resB{k} = im_resizedB;
-        end
-        
-        % mover to GPU
-        if neta.useGpu
-            im_resizedA = gpuArray(im_resizedA) ;
-            im_resizedB = gpuArray(im_resizedB) ;
-        end
-        
-        % pass through networks
-        resA = vl_simplenn(neta, im_resizedA, [], resA, ...
+            if net.useGpu
+                im_resizedA = gpuArray(im_resizedA);
+            end
+            res = [];
+            res = vl_bilinearnn(net, im_resizedA, [], res, ...
                             'conserveMemory', true, 'sync', true);
-        resB = vl_simplenn(netb, im_resizedB, [], resB, ...
-                            'conserveMemory', true, 'sync', true);
-        A = gather(resA(end).x);
-        B = gather(resB(end).x);
-        
-        % bilinearly pool the features
-        psi{s} = bilinear_pool(A,B);
+            feat = res(end).x;
+        end
+        psi{s} = squeeze(gather(feat));
         feat_dim = max(cellfun(@length,psi));
-        code{k} = zeros(feat_dim, 1);
     end
-    % sum pool across scales
+    code{k} = zeros(feat_dim, 1);
+    % pool across scales
     for s=1:numel(opts.scales),
         if ~isempty(psi{s}),
             code{k} = code{k} + psi{s};
@@ -121,56 +109,69 @@ for k=1:numel(im)
     assert(~isempty(code{k}));
 end
 
-% square-root and l2 normalize (like: Improved Fisher?)
-switch opts.normalization
-    case 'sqrt_L2'
-        for k=1:numel(im),
-            code{k} = sign(code{k}).*sqrt(abs(code{k}));
-            code{k} = code{k}./(norm(code{k}+eps));
-        end
-    case 'L2'
-        for k=1:numel(im),
-            code{k} = code{k}./(norm(code{k}+eps));
-        end
-    case 'sqrt'
-        for k=1:numel(im),
-            code{k} = sign(code{k}).*sqrt(abs(code{k}));            
-        end
-    case 'none'
-end
-
-if nVargOut==2
-    varargout{1} = cat(4, im_resA{:});
-    varargout{2} = cat(4, im_resB{:});
-end
 
 
-function psi = bilinear_pool(A, B)
-w1 = size(A,2) ;
-h1 = size(A,1) ;
-w2 = size(B,2) ;
-h2 = size(B,1) ;
+function im_resized = preprocess_image(im, keepAspect, imageSize, averageColour, scale)
 
-if w1*h1 <= w2*h2,
-    %downsample B
-    B = array_resize(B, w1, h1);
-    A = reshape(A, [w1*h1 size(A,3)]);
+if keepAspect
+    w = size(im,2) ;
+    h = size(im,1) ;
+    factor = [imageSize(1)/h,imageSize(2)/w];
+    
+    
+    factor = max(factor)*scale ;
+    
+    im_resized = imresize(single(im), ...
+        'scale', factor, ...
+        'method', 'bilinear') ;
+    
+    w = size(im_resized,2) ;
+    h = size(im_resized,1) ;
+    
+    im_resized = imcrop(im_resized, [fix((w-imageSize(1)*scale)/2)+1, fix((h-imageSize(2)*scale)/2)+1,...
+        round(imageSize(1)*scale)-1, round(imageSize(2)*scale)-1]);
 else
-    %downsample A
-    A = array_resize(A, w2, h2);
-    B = reshape(B, [w2*h2 size(B,3)]);
+    im_resized = imresize(single(im), round(imageSize([2 1])*scale), 'bilinear');
 end
+im_resized = bsxfun(@minus, im_resized, averageColour) ;
 
-% bilinear pool
-psi = A'*B;
-psi = psi(:);
 
-function Ar = array_resize(A, w, h)
-numChannels = size(A, 3);
-indw = round(linspace(1,size(A,2),w));
-indh = round(linspace(1,size(A,1),h));
-Ar = zeros(w*h, numChannels, 'single');
-for i = 1:numChannels,
-    Ai = A(indh,indw,i);
-    Ar(:,i) = Ai(:);
+function border = getBorder(net)
+
+isDag = isa(net, 'dagnn.DagNN');
+
+if isDag
+    idx = find(arrayfun(@(x) isa(x.block, 'BilinearClPooling') | isa(x.block, 'BilinearPooling'), net.layers));
+    assert(~isempty(idx), 'no bilinear layer')
+    blinput = net.layers(idx).inputIndexes;
+    
+    input = net.getVarIndex({'input', 'netb_input'});
+    input = input(~isnan(input));
+    info = net.getVarReceptiveFields(input);
+    
+    border = [];
+    for i=1:numel(input)
+        m = 0;
+        for j=1:numel(blinput)
+            if ~isempty(info(i, blinput(j)).size)
+                rs = info(i, blinput(j)).size(end);
+            else
+                rs = 0;
+            end
+            
+            m = max(m, rs);
+        end
+        border(i) = m;
+    end    
+else
+    info = vl_simplenn_display(net);
+    type = {'bilinearpool', 'bilinearclpool'};
+    idx = find(cellfun(@(x) ismember(x.type, type), net.layers));
+    assert(~isempty(idx), 'no bilinear layer')
+    if strcmp(net.layers{idx}.type, 'bilinearpool')
+        border = round(info.receptiveFieldSize(end, idx-1)/2 + 1);
+    else
+        border = max(info.receptiveFieldSize(end, [net.layers{idx}.layer1, net.layers{idx}.layer2]));
+        border = round(border/2 + 1);
+    end
 end

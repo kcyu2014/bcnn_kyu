@@ -108,12 +108,12 @@ if simplenn
     else
         train_bopts.rgbVariance = [];
     end
-    train_bopts.scale = opts.bcnnScale ;
+    train_bopts.scale = opts.imgScale ;
     
     val_bopts.transformation = opts.dataAugmentation{2};
     val_bopts.averageImage = rgbMean ;
     val_bopts.rgbVariance = [] ;
-    val_bopts.scale = opts.bcnnScale ;
+    val_bopts.scale = opts.imgScale ;
 else
     
     train_bopts(1) = net.meta.meta1.normalization;
@@ -130,12 +130,12 @@ else
         else
             train_bopts(i).rgbVariance = [];
         end
-        train_bopts(i).scale = opts.bcnnScale ;
+        train_bopts(i).scale = opts.imgScale ;
         
         val_bopts(i).transformation = opts.dataAugmentation{2};
         val_bopts(i).averageImage = rgbMean ;
         val_bopts(i).rgbVariance = [] ;
-        val_bopts(i).scale = opts.bcnnScale ;
+        val_bopts(i).scale = opts.imgScale ;
     end
 
 end
@@ -183,6 +183,8 @@ function saveNetwork(fileName, net, info)
 % % Replace the last layer with softmax
 % layers{end}.type = 'softmax';
 % layers{end}.name = 'prob';
+net.layers{end-1:end} = [];
+
 
 % Remove fields corresponding to training parameters
 ignoreFields = {'learningRate',...

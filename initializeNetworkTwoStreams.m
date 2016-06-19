@@ -192,7 +192,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             for i=1:numel(bopts)
                 bopts(i).transformation = 'none' ;
                 bopts(i).rgbVariance = [];
-                bopts(i).scale = opts.bcnnScale ;
+                bopts(i).scale = opts.imgScale ;
             end
             
             useGpu = numel(opts.train.gpus) > 0 ;
@@ -222,6 +222,11 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
                     code = code_b(:,i);
                     savefast(fullfile(opts.nonftbcnnDir, ['bcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
                 end
+            end
+            
+            % move back to cpu
+            if useGpu
+                net.move('cpu') ;
             end
         end
         

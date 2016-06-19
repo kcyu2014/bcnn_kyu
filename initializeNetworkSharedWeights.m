@@ -103,7 +103,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         bopts.numThreads = opts.numFetchThreads ;
         bopts.transformation = 'none' ;
         bopts.rgbVariance = [] ;
-        bopts.scale = opts.bcnnScale;
+        bopts.scale = opts.imgScale;
         
         
         getBatchFn = getBatchSimpleNNWrapper(bopts);
