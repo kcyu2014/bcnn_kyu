@@ -12,7 +12,7 @@ This repository contains the code for reproducing the results in ICCV 2015 paper
         Year = {2015}
     }
 	
-The code is tested on Ubuntu 14.04 using NVIDIA K40 GPU and MATLAB R2014b.
+The code is tested on Ubuntu 14.04 using NVIDIA K40 GPU and MATLAB R2014b. Recently, we have upgraded the code to support **dag** implementation
 
 Link to the [project page](http://vis-www.cs.umass.edu/bcnn).
 
@@ -34,10 +34,10 @@ B-CNN [D,D]    | 84.0%     | 84.8%        | 84.1%     | 90.6%
 
 ### Installation
 
-This code depends on [VLFEAT](http://www.vlfeat.org) and [MatConvNet](http://www.vlfeat.org/matconvnet). Follow instructions on their project pages to install them first. Our code is built on MatConvNet version `1.0-beta8`. To retrieve a particular version of MatConvNet using git type:
+This code depends on [VLFEAT](http://www.vlfeat.org) and [MatConvNet](http://www.vlfeat.org/matconvnet). Follow instructions on their project pages to install them first. Our code is built on MatConvNet version `1.0-beta18`. To retrieve a particular version of MatConvNet using git type:
 
 	>> git fetch --tags
-	>> git checkout tags/v1.0-beta8
+	>> git checkout tags/v1.0-beta18
       
 Once these are installed edit the `setup.m` to run the corresponding `setup` scripts.
 
@@ -46,7 +46,7 @@ The code implements the bilinear combination layer in symmetic and assymetic CNN
 
 ### Pre-trained models
 
-**ImageNet LSVRC 2012 pre-trained models:** Since we don't support the latest MatConvNet implementation, the pre-trained models download from MatConvNet page don't work properly here. We provide the links to download [vgg-m](http://maxwell.cs.umass.edu/bcnn/models/imagenet-vgg-m.mat) and [vgg-verydeep-16](http://maxwell.cs.umass.edu/bcnn/models/imagenet-vgg-verydeep-16.mat) in old format.
+**ImageNet LSVRC 2012 pre-trained models:** We use vgg-m and vgg-verydeep-16 as our basic models. Please download the models from matconvnet [pre-trained models](http://www.vlfeat.org/matconvnet/pretrained/) page.
 
 **Fine-tuned models:** We provide three B-CNN fine-trained models ([M,M], [D,M], and [D,D]) and SVM models trained on respective bcnn features for each of CUB-200-2011, FGVC Aircraft and Cars dataset. Note that for [M,M] and [D,D], we run the symmetric model, where you can simply use the same network for both two streams. These can be downloaded individually [here](http://maxwell.cs.umass.edu/bcnn/models). 
 

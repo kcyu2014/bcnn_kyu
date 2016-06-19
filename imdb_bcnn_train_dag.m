@@ -186,6 +186,8 @@ function saveNetwork(fileName, net, info)
 net.layers{end-1:end} = [];
 
 
+net.layers{end-1:end} = [];
+
 % Remove fields corresponding to training parameters
 ignoreFields = {'learningRate',...
                 'weightDecay',...
