@@ -183,10 +183,7 @@ function saveNetwork(fileName, net, info)
 % % Replace the last layer with softmax
 % layers{end}.type = 'softmax';
 % layers{end}.name = 'prob';
-net.layers{end-1:end} = [];
-
-
-net.layers{end-1:end} = [];
+net.layers(end-1:end) = [];
 
 % Remove fields corresponding to training parameters
 ignoreFields = {'learningRate',...
