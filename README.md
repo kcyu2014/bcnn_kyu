@@ -12,7 +12,7 @@ This repository contains the code for reproducing the results in ICCV 2015 paper
         Year = {2015}
     }
 	
-The code is tested on Ubuntu 14.04 using NVIDIA  Titan X GPU and MATLAB R2014b. Recently, we have upgraded the code to support **dag** implementation. Meanwhile, the implementation of bilinear pooling layers and our customized layers is wrapped into a separate [bcnn-package](https://bitbucket.org/tsungyu/bcnn-package).
+The code is tested on Ubuntu 14.04 using NVIDIA  Titan X GPU and MATLAB R2014b. Recently, we have upgraded the code to support **dag** implementation. Meanwhile, the implementation of bilinear pooling layers and our customized layers are wrapped into a separate [bcnn-package](https://bitbucket.org/tsungyu/bcnn-package).
 
 Link to the [project page](http://vis-www.cs.umass.edu/bcnn).
 
