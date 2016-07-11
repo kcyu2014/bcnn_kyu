@@ -19,7 +19,7 @@ opts = vl_argparse(opts, varargin) ;
 net = initializeNetwork(imdb, opts) ;
 
 % Initialize average image
-if isempty(net.normalization.averageImage), 
+if isempty(net.meta.normalization.averageImage), 
     % compute the average image
     averageImagePath = fullfile(opts.expDir, 'average.mat') ;
     if exist(averageImagePath, 'file')
@@ -27,7 +27,7 @@ if isempty(net.normalization.averageImage),
     else
       train = find(imdb.images.set == 1) ;
       bs = 256 ;
-      fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
+      fn = getBatchWrapper(net.meta.normalization, opts.numFetchThreads) ;
       for t=1:bs:numel(train)
         batch_time = tic ;
         batch = train(t:min(t+bs-1, numel(train))) ;
@@ -41,14 +41,14 @@ if isempty(net.normalization.averageImage),
       save(averageImagePath, 'averageImage') ;
     end
 
-    net.normalization.averageImage = averageImage ;
+    net.meta.normalization.averageImage = averageImage ;
     clear averageImage im temp ;
 end
 
 % -------------------------------------------------------------------------
 %                                               Stochastic gradient descent
 % -------------------------------------------------------------------------
-fn = getBatchWrapper(net.normalization, opts.numFetchThreads) ;
+fn = getBatchWrapper(net.meta.normalization, opts.numFetchThreads) ;
 [net,info] = cnn_train(net, imdb, fn, opts.train, 'conserveMemory', true) ;
 
 % Save model
@@ -75,8 +75,8 @@ ignoreFields = {'filtersMomentum', ...
 for i = 1:length(layers),
     layers{i} = rmfield(layers{i}, ignoreFields(isfield(layers{i}, ignoreFields)));
 end
-classes = net.classes;
-normalization = net.normalization;
+classes = net.meta.classes;
+normalization = net.meta.normalization;
 save(fileName, 'layers', 'classes', 'normalization');
 
 
@@ -102,7 +102,7 @@ init_bias = 0.1;
 numClass = length(imdb.classes.name);
 if ~isempty(opts.model)
     net = load(fullfile('data/models', opts.model)); % Load model if specified
-    net.normalization.keepAspect = opts.keepAspect;
+    net.meta.normalization.keepAspect = opts.keepAspect;
     fprintf('Initializing from model: %s\n', opts.model);
 
     % Replace the last but one layer with random weights
@@ -120,8 +120,8 @@ if ~isempty(opts.model)
     net.layers{end} = struct('type', 'softmaxloss') ;
 
     % Rename classes
-    net.classes.name = imdb.classes.name;
-    net.classes.description = imdb.classes.name;
+    net.meta.classes.name = imdb.classes.name;
+    net.meta.classes.description = imdb.classes.name;
     
     % TODO: add dropout layers if initializing from previous models
     return;
@@ -252,8 +252,8 @@ net.layers{end+1} = struct('type', 'conv', ...
 net.layers{end+1} = struct('type', 'softmaxloss') ;
 
 % Other details
-net.normalization.imageSize = [227, 227, 3] ;
-net.normalization.interpolation = 'bicubic' ;
-net.normalization.border = 256 - net.normalization.imageSize(1:2) ;
-net.normalization.averageImage = [] ;
-net.normalization.keepAspect = true ;
+net.meta.normalization.imageSize = [227, 227, 3] ;
+net.meta.normalization.interpolation = 'bicubic' ;
+net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
+net.meta.normalization.averageImage = [] ;
+net.meta.normalization.keepAspect = true ;

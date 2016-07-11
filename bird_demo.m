@@ -1,10 +1,7 @@
 function bird_demo(varargin)
 setup;
 % Default options
-opts.modela = 'data/models/bcnn-cub-dm/bcnn-cub-dm-neta.mat';
-opts.layera = 30;
-opts.modelb = 'data/models/bcnn-cub-dm/bcnn-cub-dm-netb.mat';
-opts.layerb = 14;
+opts.model = 'data/ft_models/bcnn-cub-dm.mat';
 opts.cubDir = 'data/cub';
 opts.useGpu = false;
 opts.svmPath = fullfile('data', 'models','svm_cub_vdm.mat');
@@ -30,26 +27,18 @@ tic;
 classifier = load(opts.svmPath);
 
 % Load the bilinear models and move to GPU if necessary
-neta = load(opts.modela);
-neta.layers = neta.layers(1:opts.layera);
-netb = load(opts.modelb);
-netb.layers = netb.layers(1:opts.layerb);
-if opts.useGpu,
-    neta = vl_simplenn_move(neta, 'gpu');
-    netb = vl_simplenn_move(netb, 'gpu');
-    neta.useGpu = true;
-    netb.useGpu = true;
+load(opts.model);
+if opts.useGpu
+    net = net_move_to_device(net, 'gpu');
 else
-    neta = vl_simplenn_move(neta, 'cpu');
-    netb = vl_simplenn_move(netb, 'cpu');
-    neta.useGpu = false;
-    netb.useGpu = false;
+    net = net_move_to_device(net, 'cpu');
 end
+
 fprintf('%.2fs to load models into memory.\n', toc);
 
 tic;
 % Compute B-CNN feature for this image
-code = get_bcnn_features(neta, netb, im, ...
+code = get_bcnn_features(net, im, ...
         'regionBorder', opts.regionBorder, ...
         'normalization', opts.normalization);
 
