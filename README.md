@@ -52,7 +52,7 @@ The implementation of the bilinear combination layer in symmetic and assymetic C
 
 ### Pre-trained models
 
-**ImageNet LSVRC 2012 pre-trained models:** We use vgg-m and vgg-verydeep-16 as our basic models. Please download the models from matconvnet [pre-trained models](http://www.vlfeat.org/matconvnet/pretrained/) page.
+**ImageNet LSVRC 2012 pre-trained models:** We use vgg-m and vgg-verydeep-16 as our basic models. The format of pre-trained models on MatConvnet has evolved continuously. In this project, we use the models in version beta18. Please download the models from matconvnet [pre-trained models](http://www.vlfeat.org/matconvnet/models/beta18/).
 
 **Fine-tuned models:** We provide three B-CNN fine-trained models ([M,M], [D,M], and [D,D]) and SVM models trained on respective bcnn features for each of CUB-200-2011, FGVC Aircraft and Cars dataset. Note that for [M,M] and [D,D], we run the symmetric model, where you can simply use the same network for both two streams. These can be downloaded individually [here](http://maxwell.cs.umass.edu/bcnn/models2). 
 
