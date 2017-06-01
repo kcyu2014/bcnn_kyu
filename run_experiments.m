@@ -106,9 +106,11 @@ function run_experiments()
     };
 
 
-  setupNameList = {'bcnnmmft', 'bcnnvdmft'};   % list of models to train and test
-  encoderList = {{bcnnmmft}, {bcnnvdmft}};
-  datasetList = {{'cub', 1}};
+%   setupNameList = {'bcnnmmft', 'bcnnvdmft'};   % list of models to train and test
+%   encoderList = {{bcnnmmft}, {bcnnvdmft}};
+  setupNameList = {'bcnnvdvd'};
+  encoderList = {{bcnnvdvd}};
+  datasetList = {{'dtd', 10}};
   
   scales = [2, 2];
 
@@ -131,7 +133,7 @@ function run_experiments()
           'prefix', 'exp', ...              % name of the output folder
           'suffix', setupNameList{ee}, ...
           'printDatasetInfo', ee == 1, ...
-          'useGpu', 1, ...
+          'useGpu', [0], ...
 		  'imgScale', scales(ee), ...  
           'dataAugmentation', 'f2') ;       %flipping for data augmentation. "none" for no augmentation
       end

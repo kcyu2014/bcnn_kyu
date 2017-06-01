@@ -28,7 +28,7 @@ if ~exist(opts.resultPath)
       else
         opts.encoders{i}.opts = horzcat(opts.encoders{i}.opts);
         train = find(ismember(imdb.images.set, [1 2])) ;
-        train = vl_colsubset(train, 1000, 'uniform') ;
+        train = vl_colsubset(train, 10, 'uniform') ;
         encoder = encoder_train_from_images(...
           imdb, imdb.images.id(train), ...
           opts.encoders{i}.opts{:}, ...
@@ -389,8 +389,8 @@ switch opts.type
             encoder.neta.layers = encoder.neta.layers(1:maxLayer);
         end
         
-        if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
-        
+%         if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
+        device = 'cpu';
         encoder.neta = net_move_to_device(encoder.neta, device);
         if isfield(encoder, 'netb')
             encoder.netb = net_move_to_device(encoder.netb, device);
