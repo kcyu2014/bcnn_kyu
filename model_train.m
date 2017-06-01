@@ -214,7 +214,11 @@ batches = mat2cell(1:numel(imageIds), 1, [opts.batchSize * ones(1, n-1), numel(i
 batchResults = cell(1, numel(batches)) ;
 
 % just use as many workers as are already available
-numWorkers = matlabpool('size') ;
+p = gcp('nocreate');
+if isempty(p)
+    p = parpool('local');
+end
+numWorkers = p.NumWorkers;
 %parfor (b = 1:numel(batches), numWorkers)
 for b = numel(batches):-1:1
   batchResults{b} = get_batch_results(imdb, imageIds, batches{b}, ...
