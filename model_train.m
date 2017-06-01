@@ -22,7 +22,7 @@ if ~exist(opts.resultPath)
         encoder = load(opts.encoders{i}.path) ;
         if isa(encoder.net, 'dagnn.DagNN'), encoder.net = dagnn.DagNN.loadobj(encoder.net); end
         if isfield(encoder, 'net')
-            if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
+            if opts.gpus, device = 'gpu'; else device = 'cpu'; end
             encoder.net = net_move_to_device(encoder.net, device);
         end
       else
@@ -32,7 +32,7 @@ if ~exist(opts.resultPath)
         encoder = encoder_train_from_images(...
           imdb, imdb.images.id(train), ...
           opts.encoders{i}.opts{:}, ...
-          'useGpu', opts.useGpu, ...
+          'useGpu', opts.gpus, ...
           'scale', opts.imgScale) ;
         encoder_save(encoder, opts.encoders{i}.path) ;
       end
