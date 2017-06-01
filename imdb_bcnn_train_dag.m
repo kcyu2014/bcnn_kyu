@@ -20,7 +20,7 @@ opts.train.batchSize = opts.batchSize ;
 opts.train.numSubBatches = opts.numSubBatches;
 opts.train.numEpochs = opts.numEpochs ;
 opts.train.continue = true ;
-opts.train.gpus = opts.useGpu ;
+opts.train.gpus = opts.gpus ;
 opts.train.prefetch = false ;
 opts.train.learningRate = opts.learningRate ;
 opts.train.expDir = opts.expDir ;
@@ -34,10 +34,10 @@ opts.inittrain.numEpochs = 300 ;
 opts.inittrain.continue = true ;
 
 
-if(isempty(opts.useGpu))
-    opts.inittrain.gpus = opts.useGpu ;
+if(isempty(opts.gpus))
+    opts.inittrain.gpus = opts.gpus ;
 else
-    opts.inittrain.gpus = opts.useGpu(1) ;
+    opts.inittrain.gpus = opts.gpus(1) ;
 end
 
 opts.inittrain.prefetch = false ;
