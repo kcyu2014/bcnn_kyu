@@ -393,8 +393,7 @@ switch opts.type
             encoder.neta.layers = encoder.neta.layers(1:maxLayer);
         end
         
-%         if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
-        device = 'cpu';
+        if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
         encoder.neta = net_move_to_device(encoder.neta, device);
         if isfield(encoder, 'netb')
             encoder.netb = net_move_to_device(encoder.netb, device);
@@ -412,7 +411,10 @@ switch opts.type
             encoder.net = vl_simplenn_tidy(encoder.net);
             if opts.useGpu
                 encoder.net.useGpu = true;
+            else
+                encoder.net.useGpu = false;
             end
+            
         end        
 end
 
