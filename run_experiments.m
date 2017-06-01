@@ -110,7 +110,7 @@ function run_experiments()
 %   encoderList = {{bcnnmmft}, {bcnnvdmft}};
   setupNameList = {'bcnnvdvd'};
   encoderList = {{bcnnvdvd}};
-  datasetList = {{'dtd', 10}};
+  datasetList = {{'minc', 5}};
   
   scales = [2, 2];
 
