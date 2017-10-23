@@ -45,8 +45,9 @@ end
     
   setupNameList = {'bcnnvdvd'};
   encoderList = {{bcnnvdvd}}; 
-  datasetList = {{'minc', 1}};  
-
+ % datasetList = {{'minc', 1}};  
+%   datasetList = {{'aircraft-variant', 1}};  
+  datasetList = {{'cub', 1}};
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
     if iscell(dataset)
@@ -60,7 +61,7 @@ end
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'checkgpu', ...  % output folder name
+			  'prefix', 'scale2', ...  % output folder name
 			  'batchSize', 64, ...
 			  'imgScale', 2, ...       % specify the scale of input images
 			  'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer

@@ -8,6 +8,7 @@
 %
 % This file is part of the BCNN and is made available under
 % the terms of the BSD license (see the COPYING file).
+fprintf('Use device gpu %d', net.useGpu);
 
 nVargOut = max(nargout,1)-1;
 

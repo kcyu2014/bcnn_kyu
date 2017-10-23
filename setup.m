@@ -8,4 +8,7 @@ addpath ./matconvnet/examples/
 % add bcnn package
 addpath ./bcnn-package/
 
+% add matbp package
+addpath ./matbp/
+
 clear mex ;

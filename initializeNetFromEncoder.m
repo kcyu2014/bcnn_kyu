@@ -180,3 +180,43 @@ net.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
 % end
 
  
+function net = addMatbpSimpleNN(encoder)
+% -------------------------------------------------------------------------
+
+
+%{
+
+% network setting
+net = vl_simplenn_tidy(net) ;
+for l=numel(net.layers):-1:1
+    if strcmp(net.layers{l}.type, 'conv')
+        net.layers{l}.opts = {'CudnnWorkspaceLimit', opts.cudnnWorkspaceLimit};
+    end
+end
+%}
+
+
+net = encoder.neta;
+
+% stack bilinearpool layer
+if isfield(encoder, 'layera') && ~isfield(encoder, 'layerb')
+    net.layers{end+1} = struct('type', 'bilinearpool', 'name', 'blp');
+else
+    assert(isfield(encoder, 'layera') && isfield(encoder, 'layera'), 'Specify both layera and layerb for cross layer bcnn with shared parameters')
+    net.layers{end+1} = struct('type', 'bilinearclpool', 'layer1', encoder.layera, 'layer2', encoder.layerb, 'name', 'blcp');
+end
+
+% stack normalization
+net.layers{end+1} = struct('type', 'sqrt', 'name', 'sqrt_norm');
+net.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
+
+
+% % Rename classes
+% net.meta.classes.name = imdb.classes.name;
+% net.meta.classes.description = imdb.classes.name;
+
+% add border for translation data jittering
+% if(~strcmp(opts.dataAugmentation{1}, 'f2') && ~strcmp(opts.dataAugmentation{1}, 'none'))
+%     net.meta.normalization.border = 256 - net.meta.normalization.imageSize(1:2) ;
+% end
+

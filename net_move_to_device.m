@@ -7,6 +7,7 @@ if isDag
 else
    net = vl_simplenn_move(net, device) ;
    if strcmp(device, 'gpu')
+       sprintf('put model on gpu');
        net.useGpu = true;
    else
        net.useGpu = false;

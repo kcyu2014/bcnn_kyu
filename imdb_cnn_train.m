@@ -1,5 +1,6 @@
 function imdb_cnn_train(imdb, opts, varargin)
 % Train a CNN model on a dataset supplied by imdb
+fprintf('imdb_cnn_train');
 
 opts.lite = false ;
 opts.numFetchThreads = 0 ;
@@ -16,7 +17,11 @@ opts = vl_argparse(opts, varargin) ;
 %                                                    Network initialization
 % -------------------------------------------------------------------------
 
+fprintf('train.gpus %d', opts.train.gpus); 
+opts.train.gpus = 1;
 net = initializeNetwork(imdb, opts) ;
+
+fprintf('finish initialized network \n\n');
 
 % Initialize average image
 if isempty(net.meta.normalization.averageImage), 

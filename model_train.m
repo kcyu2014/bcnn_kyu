@@ -11,11 +11,14 @@ function model_train(varargin)
 % -------------------------------------------------------------------------
 %                                          Train encoders and compute codes
 % -------------------------------------------------------------------------
+fprintf('finish model setup \n');
 
 if ~exist(opts.resultPath)
+  fprintf('Result path not exists %s \n', opts.resultPath);
   psi = {} ;
   for i = 1:numel(opts.encoders)
     if exist(opts.encoders{i}.codePath)
+      fprintf('Code path exist %s \n', opts.encoders{i}.codePath);
       load(opts.encoders{i}.codePath, 'code', 'area') ;
     else
       if exist(opts.encoders{i}.path)
@@ -23,16 +26,22 @@ if ~exist(opts.resultPath)
         if isa(encoder.net, 'dagnn.DagNN'), encoder.net = dagnn.DagNN.loadobj(encoder.net); end
         if isfield(encoder, 'net')
             if opts.gpus, device = 'gpu'; else device = 'cpu'; end
+            fprintf('USE DEVICE %s \n', device);
             encoder.net = net_move_to_device(encoder.net, device);
         end
       else
         opts.encoders{i}.opts = horzcat(opts.encoders{i}.opts);
         train = find(ismember(imdb.images.set, [1 2])) ;
         train = vl_colsubset(train, 10, 'uniform') ;
+        if opts.gpus > 0
+            useGpu = true;
+        else
+            useGpu = false;
+        end
         encoder = encoder_train_from_images(...
           imdb, imdb.images.id(train), ...
           opts.encoders{i}.opts{:}, ...
-          'useGpu', opts.gpus, ...
+          'useGpu', useGpu, ...
           'scale', opts.imgScale) ;
         encoder_save(encoder, opts.encoders{i}.path) ;
       end
@@ -48,6 +57,8 @@ end
 % -------------------------------------------------------------------------
 %                                                            Train and test
 % -------------------------------------------------------------------------
+
+fprintf('finish code loading and concat psi');
 
 if exist(opts.resultPath)
   info = load(opts.resultPath) ;
@@ -204,6 +215,9 @@ opts.dataAugmentation = 'none';
 opts.scale = 1;
 opts = vl_argparse(opts, varargin) ;
 
+% Change the maximum local descritpor returned.
+opts.maxNumLocalDescriptorsReturned = 10;
+
 [~,imageSel] = ismember(imageIds, imdb.images.id) ;
 imageIds = unique(imdb.images.id(imageSel)) ;
 n = numel(imageIds) ;
@@ -246,7 +260,7 @@ for b = 1:numel(batches)
   end
 end
 if opts.concatenateCode
-   code = cat(2, code{:}) ;
+   code = cat(2, code{:});
 end
 % code is either:
 % - a cell array, each cell containing an array of local features for a
@@ -394,6 +408,9 @@ switch opts.type
         end
         
         if opts.useGpu, device = 'gpu'; else device = 'cpu'; end
+        
+        fprintf('\n USE DEVICE %s \n \n', device);
+        
         encoder.neta = net_move_to_device(encoder.neta, device);
         if isfield(encoder, 'netb')
             encoder.netb = net_move_to_device(encoder.netb, device);

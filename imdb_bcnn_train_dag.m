@@ -55,8 +55,16 @@ encoderOpts = parseEncoder(opts);
 simplenn = encoderOpts.shareWeight;
 
 if simplenn
-    % the case with shared weights    
-    initNetFn = @initializeNetworkSharedWeights;
+    % the case with shared weights 
+    switch encoderOpts.type
+        case 'bcnn'
+            initNetFn = @initializeNetworkSharedWeights;
+        case 'matbp'
+            initNetFn = @initializeMatbpNetworkSharedWeights;
+        otherwise
+            error('Unknown CNN type %s', encoderOpts.type) ;
+    end
+
 else
     % the case with two streams
     initNetFn = @initializeNetworkTwoStreams;
