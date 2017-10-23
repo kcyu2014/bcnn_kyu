@@ -47,7 +47,7 @@ end
   encoderList = {{bcnnvdvd}}; 
  % datasetList = {{'minc', 1}};  
 %   datasetList = {{'aircraft-variant', 1}};  
-  datasetList = {{'cub', 1}};
+  datasetList = {{'dtd', 1}};
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
     if iscell(dataset)
@@ -66,7 +66,7 @@ end
 			  'imgScale', 2, ...       % specify the scale of input images
 			  'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
 			  'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
-			  'gpus', [1], ...          %specify the GPU to use. 0 for using CPU
+			  'gpus', [], ...          %specify the GPU to use. 0 for using CPU
               'learningRate', 0.001, ...
 			  'numEpochs', 100, ...
 			  'momentum', 0.9, ...

@@ -61,7 +61,11 @@ end
 
 % stack matbp layer
 if(encoderOpts.layera==encoderOpts.layerb)
-    net.layers{end+1} = struct('type', 'custom', 'name', 'nnfspool');
+      net.layers{end+1} = struct('type','custom_masks', ...
+      'method','o2p_avg_log', ...
+      'epsilon',1e-3, ...
+      'forward',@nnfspool_forward,'backward',@nnfspool_backward);
+
 else
     error("MatBP Not supported bilinear no share weights");
 end
@@ -112,7 +116,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         
         % compute and cache the bilinear cnn features
         for t=1:batchSize:numel(train)
-            fprintf('Initialization: extracting bcnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
+            fprintf('Initialization: extracting cnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
             batch = train(t:min(numel(train), t+batchSize-1));
             [im, labels] = getBatchFn(imdb, batch) ;
             if opts.train.prefetch
