@@ -24,8 +24,8 @@ end
 
   setupNameList = {'matbpvd'};
   encoderList = {{matbpvd}}; 
-  datasetList = {{'minc', 1}};  
-%   datasetList = {{'cub', 1}};  
+  % datasetList = {{'minc', 1}};  
+  datasetList = {{'cub', 1}};  
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
     if iscell(dataset)
@@ -39,9 +39,9 @@ end
         
           [opts, imdb] = model_setup('dataset', dataset, ...
 			  'encoders', encoderList{ee}, ...
-			  'prefix', 'checkgpu', ...  % output folder name
+			  'prefix', 'matbp_exp', ...  % output folder name
 			  'batchSize', 64, ...
-			  'imgScale', 1, ...       % specify the scale of input images
+			  'imgScale', 2, ...       % specify the scale of input images
 			  'bcnnLRinit', true, ...   % do logistic regression to initilize softmax layer
 			  'dataAugmentation', {'f2','none','none'},...      % do data augmentation [train, val, test]. Only support flipping for train set on current release.
 			  'gpus', [1], ...          %specify the GPU to use. 0 for using CPU

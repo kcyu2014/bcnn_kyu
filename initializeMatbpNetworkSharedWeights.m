@@ -131,7 +131,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             net.layers{end}.class = labels ;
             
             res = [] ;
-            res = vl_bilinearnn(netInit, im, [], res, ...
+            res = vl_pvnn(netInit, im, [], res, ...
                 'accumulate', false, ...
                 'mode', 'test', ...
                 'conserveMemory', true, ...
@@ -140,7 +140,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             codeb = squeeze(gather(res(end).x));
             for i=1:numel(batch)
                 code = codeb(:,i);
-                savefast(fullfile(opts.nonftbcnnDir, ['bcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
+                savefast(fullfile(opts.nonftbcnnDir, ['matbpcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
             end
         end
     end

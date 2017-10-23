@@ -5,10 +5,7 @@ run ./vlfeat/toolbox/vl_setup
 run ./matconvnet/matlab/vl_setupnn
 addpath ./matconvnet/examples/
 
-% add bcnn package
-addpath ./bcnn-package/
-
-% add matbp package
-addpath ./matbp/
+% add custom pv package
+addpath ./pv_package/
 
 clear mex ;
