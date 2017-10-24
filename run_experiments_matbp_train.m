@@ -36,6 +36,7 @@ end
   encoderList = {{pvvd}}; 
   % datasetList = {{'minc', 1}};  
   datasetList = {{'aircraft-variant', 1}};  
+  % datasetList = {{'cub', 1}};
   for ii = 1 : numel(datasetList)
     dataset = datasetList{ii} ;
     if iscell(dataset)
