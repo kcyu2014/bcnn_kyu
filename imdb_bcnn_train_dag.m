@@ -61,6 +61,8 @@ if simplenn
             initNetFn = @initializeNetworkSharedWeights;
         case 'matbp'
             initNetFn = @initializeMatbpNetworkSharedWeights;
+        case 'pvcnn'
+            initNetFn = @initializePVNetworkSharedWeights;
         otherwise
             error('Unknown CNN type %s', encoderOpts.type) ;
     end

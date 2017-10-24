@@ -1,10 +1,16 @@
 function res = vl_bilinearnn(net, x, dzdy, res, varargin)
+% KCYU version: Change this file to implement more layers
+%       1. matrix logarithm layer (custom layer by matrix backprop)
+%       2. PV layer (vl_nnpvpool()) 
+%       3. 
+%
 % VL_BILINEARNN is the extension of VL_SIMPLENN to suppport 
 %        1.vl_nnbilinearpool()
 %        2.vl_nnbilinearclpool()
 %        3.vl_nnsqrt()
 %        4.vl_nnl2norm()
-%   RES = VL_BILINEARENN(NET, X) evaluates the convnet NET on data X.
+%   Adapt into 
+%   RES = VL_BILINEARNN(NET, X) evaluates the convnet NET on data X.
 %   RES = VL_BILINEARNN(NET, X, DZDY) evaluates the convnent NET and its
 %   derivative on data X and output derivative DZDY.
 %
@@ -270,6 +276,11 @@ for i=1:n
       res(i+1).x = vl_nnsqrt(res(i).x, 1e-8);
     case 'l2norm'
       res(i+1).x = vl_nnl2norm(res(i).x, 1e-10);
+    case 'o2t_pool'
+      % matrix back-prop pooling
+      res(i+1).x = vl_nnmatbplog(res(i).x, 1e-3);
+    case 'gsp'
+      res(i+1).x = vl_nngsp(res(i).x);
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
@@ -401,7 +412,14 @@ if doder
         backprop = vl_nnl2norm(res(i).x, 1e-10, res(i+1).dzdx);
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);
         clear backprop
-        
+      case 'o2t_pool'
+        backprop = vl_nnmatbplog(res(i).x, 1e-3, res(i+1).dzdx);
+        res(i).dzdx = updateGradient(res(i).dzdx, backprop);
+        clear backprop
+      case 'gsp'
+        backprop = vl_nngsp(res(i).x, res(i+1).dzdx);
+        res(i).dzdx = updateGradient(res(i).dzdx, backprop);
+        clear backprop
       case 'custom'
         res(i) = l.backward(l, res(i), res(i+1)) ;
     end

@@ -46,6 +46,12 @@ function lower = nnfspool_backward(opts, lower, upper, masks)
           counter = counter + 1;
         end
       end
+    case {'pv_pooling'}
+      % Gradients for PV layer.
+      lower.dzdx = zeros(M, N, D, L, 'single', 'gpuArray');
+      upper_dzdx = double(gather(upper.dzdx));
+      counter = 1;
+      
     otherwise
       error('Not supported!');
   end 

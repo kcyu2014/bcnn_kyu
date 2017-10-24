@@ -1,4 +1,4 @@
-function net = initializeMatbpNetworkSharedWeights(imdb, encoderOpts, opts)
+function net = initializePVNetworkSharedWeights(imdb, encoderOpts, opts)
 % Modified by Kaicheng Yu
 % Copyright (C) 2015 Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji.
 % All rights reserved.
@@ -58,33 +58,59 @@ if opts.batchNormalization
     net = simpleRemoveLayersOfType(net,'lrn');
 end
 
-
-% stack matbp layer
-if(encoderOpts.layera==encoderOpts.layerb)
-      net.layers{end+1} = struct('type','custom', ...
-      'method', 'o2p_avg_log', ...
-      'epsilon', 0.001, ...
-      'forward', @nnfspool_forward, 'backward',@nnfspool_backward);
-
-else
-    error('MatBP Not supported bilinea no share weights');
-end
+%%%%%%%%%%%% Modified my own layer %%%%%%%%%%%%%%%%%%%%%%%%%%%
+% stack pv layer for net c
 
 % should not stack normalization
 % net.layers{end+1} = struct('type', 'sqrt', 'name', 'sqrt_norm');
 % net.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
 
 
-% build a linear classifier netc
-initialW = 0.001/scal * randn(1,1,mapSize1*mapSize2,numClass,'single');
-initialBias = init_bias.*ones(1, numClass, 'single');
+% build PV equivelance netc for pretrain
 netc.layers = {};
+ndim = 256;
+pvdim = 2048;
+
+% Use encoderOpts.pvtype to switch.
+
+% add 1x1 conv to reduce dimension
+netc.layers{end+1} = struct('type', 'conv', 'name', sprintf('last_conv%s', ''), ...
+  'weights', {{0.001/scal * randn(1,1, 512, ndim, 'single'), init_bias * ones(1, ndim, 'single')}}, ...
+  'stride', 1, ...,
+  'learningRate', [1, 2], ...
+  'weightDecay', [1, 0]);
+netc.layers{end+1} = struct('type', 'relu');
+
+% build pv equivelance
+netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
+  'weights', {{ones(ndim, 1, 'single'), zeros(ndim, 1, 'single'), [zeros(ndim, 1, 'single'), ones(ndim, 1, 'single')]}}, ...
+  'learningRate', [2 1 0.05], ...
+  'weightDecay', [0 0]) ;
+
+netc.layers{end+1} = struct('type', 'conv', 'name', 'pv_conv',...
+  'weights', {{0.001/scal * randn(1,1, ndim, pvdim, 'single'), init_bias * ones(1, pvdim, 'single')}}, ...
+  'stride', 1, ...,
+  'learningRate', [1, 2], ...
+  'weightDecay', [1, 0]);
+
+netc.layers{end+1} = struct('type', 'gsp'); 
+
+netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
+  'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
+  'learningRate', [2 1 0.05], ...
+  'weightDecay', [0 0]) ;
+  
+% classifier layer with pretrained preparation
+initialW = 0.001/scal * randn(1,1,pvdim, numClass,'single');
+initialBias = init_bias.*ones(1, numClass, 'single');
+
 netc.layers{end+1} = struct('type', 'conv', 'name', 'classifier', ...
     'weights', {{initialW, initialBias}}, ...
     'stride', 1, ...
     'pad', 0, ...
-    'learningRate', [1000 1000], ...
-    'weightDecay', [0 0]) ;
+    'learningRate', [1 2], ...
+    'weightDecay', [1 0]) ;
+  
 netc.layers{end+1} = struct('type', 'softmaxloss', 'name', 'loss') ;
 netc = vl_simplenn_tidy(netc) ;
 
@@ -116,7 +142,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         
         % compute and cache the bilinear cnn features
         for t=1:batchSize:numel(train)
-            fprintf('Initialization: extracting cnn feature of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
+            fprintf('Initialization: extracting feature pv pretrain of batch %d/%d\n', ceil(t/batchSize), ceil(numel(train)/batchSize));
             batch = train(t:min(numel(train), t+batchSize-1));
             [im, labels] = getBatchFn(imdb, batch) ;
             if opts.train.prefetch
@@ -131,7 +157,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             net.layers{end}.class = labels ;
             
             res = [] ;
-            res = vl_pvnn(netInit, im, [], res, ...
+            res = vl_bilinearnn(netInit, im, [], res, ...
                 'accumulate', false, ...
                 'mode', 'test', ...
                 'conserveMemory', true, ...
@@ -139,8 +165,9 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
                 'cudnn', opts.cudnn) ;
             codeb = squeeze(gather(res(end).x));
             for i=1:numel(batch)
-                code = codeb(:,i);
-                savefast(fullfile(opts.nonftbcnnDir, ['matbpcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
+                % Save the data format according to the model output
+                code = codeb(:,:,:,i);
+                savefast(fullfile(opts.nonftbcnnDir, ['pvcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
             end
         end
     end
@@ -148,14 +175,14 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
     clear code res netInit
     
     % get the pretrain linear classifier
-    if exist(fullfile(opts.expDir, 'initial_fc.mat'), 'file')
-        load(fullfile(opts.expDir, 'initial_fc.mat'), 'netc') ;
+    if exist(fullfile(opts.expDir, 'initial_pv.mat'), 'file')
+        load(fullfile(opts.expDir, 'initial_pv.mat'), 'netc') ;
     else
         
         bcnndb = imdb;
         tempStr = sprintf('%05d\t', train);
         tempStr = textscan(tempStr, '%s', 'delimiter', '\t');
-        bcnndb.images.name = strcat('bcnn_nonft_', tempStr{1}');
+        bcnndb.images.name = strcat('pvcnn_nonft_', tempStr{1}');
         bcnndb.images.id = bcnndb.images.id(train);
         bcnndb.images.label = bcnndb.images.label(train);
         bcnndb.images.set = bcnndb.images.set(train);
@@ -165,7 +192,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         [netc, info] = cnn_train(netc, bcnndb, @getBatch_bcnn_fromdisk, opts.inittrain, ...
             'conserveMemory', true);
         
-        save(fullfile(opts.expDir, 'initial_fc.mat'), 'netc', '-v7.3') ;
+        save(fullfile(opts.expDir, 'initial_pv.mat'), 'netc', '-v7.3') ;
     end
     
 end
@@ -199,14 +226,14 @@ end
 
 function [im,labels] = getBatch_bcnn_fromdisk(imdb, batch)
 % -------------------------------------------------------------------------
-
+% HARD CODE for temp solution. Don't know how to code programatically
 im = cell(1, numel(batch));
 for i=1:numel(batch)
     load(fullfile(imdb.imageDir, imdb.images.name{batch(i)}));
     im{i} = code;
+    im{i} = reshape(im{i}, cat(2, size(im{1}), 1));
 end
-im = cat(2, im{:});
-im = reshape(im, 1, 1, size(im,1), size(im, 2));
+im = cat(4, im{:});
 labels = imdb.images.label(batch) ;
 
 
