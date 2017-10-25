@@ -10,6 +10,7 @@ vlfeat
 
 # Temp matlab files
 ._*.m
+.#*.m
 pv_package/._*.m
 *~
 pv_package/*~
