@@ -4,6 +4,3 @@
 [submodule "vlfeat"]
 	path = vlfeat
 	url = https://github.com/vlfeat/vlfeat.git
-[submodule "bcnn-package"]
-	path = bcnn-package
-	url = https://tsungyu@bitbucket.org/tsungyu/bcnn-package.git
