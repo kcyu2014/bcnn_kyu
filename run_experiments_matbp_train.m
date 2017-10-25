@@ -46,6 +46,8 @@ end
 
   setupNameList = {'pvvdgsp-no1x1'};
   encoderList = {{pvvdgsp2}}; 
+%   setupNameList = {'pvvdgsp'};
+%   encoderList = {{pvvdgsp}}; 
   % datasetList = {{'minc', 1}};  
   % datasetList = {{'aircraft-variant', 1}};  
   datasetList = {{'cub', 1}};
