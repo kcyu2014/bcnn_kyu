@@ -1,6 +1,5 @@
-*~
-data/*
 data/
+data/*
 toolbox/
 matconvnet
 vlfeat
