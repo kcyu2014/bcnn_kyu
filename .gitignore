@@ -1,5 +1,9 @@
 *~
+data/*
 data/
 toolbox/
 matconvnet
 vlfeat
+
+./._*.m
+./pv_package/._*.m

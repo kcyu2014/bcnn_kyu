@@ -274,6 +274,8 @@ for i=1:n
       res(i+1).x = vl_nnbilinearclpool(x1, x2);
     case 'sqrt'
       res(i+1).x = vl_nnsqrt(res(i).x, 1e-8);
+    case 'scalesqrt'
+      res(i+1).x = vl_nnscalesqrt(res(i).x, 1e-8, l.scale);
     case 'l2norm'
       res(i+1).x = vl_nnl2norm(res(i).x, 1e-10);
     case 'o2t_pool'
@@ -281,6 +283,7 @@ for i=1:n
       res(i+1).x = vl_nnmatbplog(res(i).x, 1e-3);
     case 'gsp'
       res(i+1).x = vl_nngsp(res(i).x);
+     
     case 'custom'
       res(i+1) = l.forward(l, res(i), res(i+1)) ;
     otherwise
@@ -404,6 +407,10 @@ if doder
         [y1, y2] = vl_nnbilinearclpool(x1, x2, res(i+1).dzdx);
         res(l.layer1+1).dzdx = updateGradient(res(l.layer1+1).dzdx, y1);
         res(l.layer2+1).dzdx = updateGradient(res(l.layer2+1).dzdx, y2);
+      case 'scalesqrt'
+        backprop = vl_nnscalesqrt(res(i).x, 1e-8, l.scale, res(i+1).dzdx);
+        res(i).dzdx = updateGradient(res(i).dzdx, backprop);
+        clear backprop
       case 'sqrt'
         backprop = vl_nnsqrt(res(i).x, 1e-8, res(i+1).dzdx);
         res(i).dzdx = updateGradient(res(i).dzdx, backprop);

@@ -1,4 +1,4 @@
-function y = vl_nnsqrt(x, param, varargin)
+function y = vl_nnscalesqrt(x, param, scale, varargin)
 % VL_NNSQRT perform square root normalization for the input features
 % at each location
 %
@@ -16,8 +16,8 @@ if backMode
 end
 
 if backMode
-    y = 0.5./sqrt(abs(x) + thresh);
+    y = 0.5./sqrt(scale .* abs(x) + thresh);
     y = y.*dzdy;
 else
-    y = sign(x).*sqrt(abs(x));
+    y = sign(x).*sqrt(scale .* abs(x));
 end

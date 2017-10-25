@@ -28,8 +28,8 @@ net.layers = net.layers(1:maxLayer);
 
 % get the feature dimension for both layers
 netInfo = vl_simplenn_display(net);
-mapSize1 = netInfo.dataSize(3, encoderOpts.layera+1);
-mapSize2 = netInfo.dataSize(3, encoderOpts.layerb+1);
+% mapSize1 = netInfo.dataSize(3, encoderOpts.layera+1);
+% mapSize2 = netInfo.dataSize(3, encoderOpts.layerb+1);
 
 % network setting
 net = vl_simplenn_tidy(net) ;
@@ -61,49 +61,48 @@ end
 %%%%%%%%%%%% Modified my own layer %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % stack pv layer for net c
 
-% should not stack normalization
-% net.layers{end+1} = struct('type', 'sqrt', 'name', 'sqrt_norm');
-% net.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
-
-
 % build PV equivelance netc for pretrain
 netc.layers = {};
 ndim = 256;
 pvdim = 2048;
 
-% Use encoderOpts.pvtype to switch.
 
 % add 1x1 conv to reduce dimension
 netc.layers{end+1} = struct('type', 'conv', 'name', sprintf('last_conv%s', ''), ...
-  'weights', {{0.001/scal * randn(1,1, 512, ndim, 'single'), init_bias * ones(1, ndim, 'single')}}, ...
+  'weights', {{0.01/scal * randn(1,1, 512, ndim, 'single'), init_bias * ones(1, ndim, 'single')}}, ...
   'stride', 1, ...,
   'learningRate', [1, 2], ...
   'weightDecay', [1, 0]);
 netc.layers{end+1} = struct('type', 'relu');
-
 % build pv equivelance
 netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
   'weights', {{ones(ndim, 1, 'single'), zeros(ndim, 1, 'single'), [zeros(ndim, 1, 'single'), ones(ndim, 1, 'single')]}}, ...
   'learningRate', [2 1 0.05], ...
   'weightDecay', [0 0]) ;
 
-netc.layers{end+1} = struct('type', 'conv', 'name', 'pv_conv',...
-  'weights', {{0.001/scal * randn(1,1, ndim, pvdim, 'single'), init_bias * ones(1, pvdim, 'single')}}, ...
-  'stride', 1, ...,
-  'learningRate', [1, 2], ...
-  'weightDecay', [1, 0]);
+% Use encoderOpts.pvtype to switch.
+switch encoderOpts.pvtype
+  case 'gsp'
+    netc.layers{end+1} = struct('type', 'conv', 'name', 'pv_conv',...
+      'weights', {{0.01/scal * randn(1,1, ndim, pvdim, 'single'), init_bias * ones(1, pvdim, 'single')}}, ...
+      'stride', 1, ...,
+      'learningRate', [1, 2], ...
+      'weightDecay', [1, 0]);
 
-netc.layers{end+1} = struct('type', 'gsp'); 
+    netc.layers{end+1} = struct('type', 'gsp'); 
 
-netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
-  'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
-  'learningRate', [2 1 0.05], ...
-  'weightDecay', [0 0]) ;
-  
+    netc.layers{end+1} = struct('type', 'scalesqrt', 'name', 'sqrt_norm', 'scale', 2);
+%     netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
+    netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
+      'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
+      'learningRate', [2 1 0.05], ...
+      'weightDecay', [0 0]) ;
+  otherwise
+    error(['Type not supported', encoderOpts.pvtype]);
+
 % classifier layer with pretrained preparation
 initialW = 0.001/scal * randn(1,1,pvdim, numClass,'single');
 initialBias = init_bias.*ones(1, numClass, 'single');
-
 netc.layers{end+1} = struct('type', 'conv', 'name', 'classifier', ...
     'weights', {{initialW, initialBias}}, ...
     'stride', 1, ...
