@@ -180,6 +180,7 @@ encoderOpts.layera = 14;
 encoderOpts.modelb = [];
 encoderOpts.layerb = 14;
 encoderOpts.shareWeight = false;
+encoderOpts.pvtype = '';
 
 encoderOpts = vl_argparse(encoderOpts, opts.encoders{1}.opts);
 

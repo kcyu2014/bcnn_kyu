@@ -99,6 +99,7 @@ switch encoderOpts.pvtype
       'weightDecay', [0 0]) ;
   otherwise
     error(['Type not supported', encoderOpts.pvtype]);
+end
 
 % classifier layer with pretrained preparation
 initialW = 0.001/scal * randn(1,1,pvdim, numClass,'single');
