@@ -99,6 +99,7 @@ switch encoderOpts.pvtype
       'weightDecay', [0 0]) ;
 %%%%%%%%%%%% switch different configs %%%%%%%%%%%%%%%%%%%%%%%%%%%
   case 'no1x1gsp'
+    ndim = 512;
     % build pv equivelance
     netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
       'weights', {{ones(ndim, 1, 'single'), zeros(ndim, 1, 'single'), [zeros(ndim, 1, 'single'), ones(ndim, 1, 'single')]}}, ...
