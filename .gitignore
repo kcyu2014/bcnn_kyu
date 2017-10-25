@@ -1,8 +1,15 @@
+# potential folders
 data/
 data/*
 toolbox/
+
+# Symbolic links
 matconvnet
+data
 vlfeat
 
-./._*.m
-./pv_package/._*.m
+# Temp matlab files
+._*.m
+pv_package/._*.m
+*~
+pv_package/*~
