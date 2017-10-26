@@ -131,7 +131,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             net.layers{end}.class = labels ;
             
             res = [] ;
-            res = vl_pvnn(netInit, im, [], res, ...
+            res = vl_bilinearnn(netInit, im, [], res, ...
                 'accumulate', false, ...
                 'mode', 'test', ...
                 'conserveMemory', true, ...
@@ -155,7 +155,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         bcnndb = imdb;
         tempStr = sprintf('%05d\t', train);
         tempStr = textscan(tempStr, '%s', 'delimiter', '\t');
-        bcnndb.images.name = strcat('bcnn_nonft_', tempStr{1}');
+        bcnndb.images.name = strcat('matbpcnn_nonft_', tempStr{1}');
         bcnndb.images.id = bcnndb.images.id(train);
         bcnndb.images.label = bcnndb.images.label(train);
         bcnndb.images.set = bcnndb.images.set(train);
