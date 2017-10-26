@@ -15,7 +15,7 @@ else
             net = encoder.neta;
         else
             idx = find(cellfun(@(x) sum(strcmp(x.type, {'bilinearpool', 'bilinearclpool'})), encoder.neta.layers), 1);
-            assert(~isempty(idx), 'no bilinear layer in the network')
+            % assert(~isempty(idx), 'no bilinear layer in the network')
             net = encoder.neta;
         end
     end

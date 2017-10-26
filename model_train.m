@@ -331,6 +331,8 @@ switch encoder.type
             'maxNumLocalDescriptorsReturned', maxn) ;
     case 'bcnn'
         code_ = get_bcnn_features(encoder.net, im, 'scales', scale);
+    case 'pvcnn'
+        code_ = get_pvcnn_features(encoder.net, im, 'scales', scale);
 end
 result.code = code_ ;
 
@@ -381,7 +383,7 @@ switch opts.type
             encoder.net = vl_simplenn_move(encoder.net, 'cpu') ;
             encoder.net.useGpu = false ;
         end
-   case 'bcnn'
+   case {'bcnn', 'pvcnn'}
        encoder.normalization = opts.normalization;
         encoder.neta = load(opts.modela);
         if isfield(encoder.neta, 'net')
@@ -436,7 +438,7 @@ switch opts.type
 end
 
 switch opts.type
-  case {'rcnn', 'bcnn'}
+  case {'rcnn', 'bcnn', 'pvcnn'}
     return ;
 end
 

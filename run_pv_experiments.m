@@ -33,7 +33,8 @@ function run_pv_experiments()
 %   datasetList = {{'minc', 1}};
   setupNameList = {'gspvdft'};
   encoderList = {{gspvdft}};
-  datasetList = {{'cub', 1}};
+%   datasetList = {{'cub', 1}};
+  datasetList = {{'aircraft-variant', 1}};
   
   scales = [2, 2];
 
@@ -56,7 +57,7 @@ function run_pv_experiments()
         'prefix', 'exp', ...              % name of the output folder
         'suffix', setupNameList{ee}, ...
         'printDatasetInfo', ee == 1, ...
-        'gpus', 1, ...
+        'gpus', [1], ...
         'imgScale', scales(ee), ...  
         'dataAugmentation', 'f2') ;       %flipping for data augmentation. "none" for no augmentation
     end
