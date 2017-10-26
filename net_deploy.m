@@ -150,7 +150,8 @@ for l = 1:numel(net.layers)
       net.layers{l}.weights{1}, ...
       net.layers{l}.weights{2}, ...
       net.layers{l}.weights{3}) ;
-    net.layers{l+1}.weights = {filters, biases} ;
+      net.layers{l+1}.weights = {filters, biases} ;
+      break;
     end
     [filters, biases] = mergeBatchNorm(...
       net.layers{l-1}.weights{1}, ...
@@ -173,25 +174,3 @@ biases(:) = biases(:) + b(:) ;
 sz = size(filters) ;
 numFilters = sz(4) ;
 filters = reshape(bsxfun(@times, reshape(filters, [], numFilters), a'), sz) ;
-
-
-% -------------------------------------------------------------------------
-function [filters, biases] = mergeBatchNormAfterConv(filters, biases, multipliers, offsets, moments)
-% -------------------------------------------------------------------------
-% Add for merge BNorm into Conv in l+1.
-% 
-a = multipliers(:) ./ moments(:,2) ;
-b = offsets(:) - moments(:,1) .* a ;
-filters = permute(filters, [1,2,4,3]);
-sz = size(filters) ;
-numFilters = sz(4);
-numNewFilters = sz(3);
-
-% Compose new bias
-tmp_b = reshape(bsxfun(@times, reshape(filters, [], numFilters), b'), sz) ;
-tmp_b = sum(reshape(permute(tmp_b, [1,2,4,3]), [], numNewFilters), 1);
-tmp_b = tmp_b';
-biases(:) = biases(:) + tmp_b(:);
-% Compose new filters. W .* a
-filters = reshape(bsxfun(@times, reshape(filters, [], numFilters), a'), sz) ;
-filters = permute(filters, [1,2,4,3]);

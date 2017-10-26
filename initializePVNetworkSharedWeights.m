@@ -70,7 +70,7 @@ pvdim = 2048;
 % Use encoderOpts.pvtype to switch.
 switch encoderOpts.pvtype
 %%%%%%%%%%%% switch different configs %%%%%%%%%%%%%%%%%%%%%%%%%%%
-  case 'gsp'
+  case {'gsp', 'gsp_orig'}
     % add 1x1 conv to reduce dimension
     netc.layers{end+1} = struct('type', 'conv', 'name', sprintf('last_conv%s', ''), ...
       'weights', {{0.01/scal * randn(1,1, 512, ndim, 'single'), init_bias * ones(1, ndim, 'single')}}, ...
@@ -90,8 +90,9 @@ switch encoderOpts.pvtype
           'weightDecay', [1, 0]);
 
     netc.layers{end+1} = struct('type', 'gsp'); 
-
-    netc.layers{end+1} = struct('type', 'scalesqrt', 'name', 'sqrt_norm', 'scale', 2);
+    if strcmp(encoderOpts.pvtype, 'gsp')
+        netc.layers{end+1} = struct('type', 'scalesqrt', 'name', 'sqrt_norm', 'scale', 2);
+    end
 %     netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
     netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
       'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
