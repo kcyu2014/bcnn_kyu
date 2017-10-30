@@ -7,5 +7,7 @@ addpath ./matconvnet/examples/
 
 % add custom pv package
 addpath ./pv_package/
+addpath ./utils/
+addpath ./myutils/
 
 clear mex ;

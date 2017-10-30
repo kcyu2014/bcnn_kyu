@@ -64,13 +64,15 @@ end
 % build PV equivelance netc for pretrain
 netc.layers = {};
 ndim = 256;
-pvdim = 2048;
 
+% Wrap for pvdim
+pvdim = encoderOpts.pvdim;
+% opts.nonftbcnnDir = sprintf('%s-pv%d', opts.nonftbcnnDir, pvdim);
 
 % Use encoderOpts.pvtype to switch.
 switch encoderOpts.pvtype
 %%%%%%%%%%%% switch different configs %%%%%%%%%%%%%%%%%%%%%%%%%%%
-  case {'gsp', 'gsp_orig'}
+  case {'gsp', 'gsp_orig', 'gsp-nobn'}
     % add 1x1 conv to reduce dimension
     netc.layers{end+1} = struct('type', 'conv', 'name', sprintf('last_conv%s', ''), ...
       'weights', {{0.01/scal * randn(1,1, 512, ndim, 'single'), init_bias * ones(1, ndim, 'single')}}, ...
@@ -92,14 +94,18 @@ switch encoderOpts.pvtype
     netc.layers{end+1} = struct('type', 'gsp'); 
     if strcmp(encoderOpts.pvtype, 'gsp')
         netc.layers{end+1} = struct('type', 'scalesqrt', 'name', 'sqrt_norm', 'scale', 2);
+%     
     end
-%     netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
-    netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
-      'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
-      'learningRate', [2 1 0.05], ...
-      'weightDecay', [0 0]) ;
+    if strcmp(encoderOpts.pvtype, 'gsp-nobn')
+        netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
+    else
+      netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
+        'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
+        'learningRate', [2 1 0.05], ...
+        'weightDecay', [0 0]);
+    end
 %%%%%%%%%%%% switch different configs %%%%%%%%%%%%%%%%%%%%%%%%%%%
-  case 'no1x1gsp'
+  case {'no1x1gsp', 'no1x1gsp-nobn'}
     ndim = 512;
     % build pv equivelance
     netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
@@ -115,11 +121,17 @@ switch encoderOpts.pvtype
     netc.layers{end+1} = struct('type', 'gsp'); 
 
     netc.layers{end+1} = struct('type', 'scalesqrt', 'name', 'sqrt_norm', 'scale', 2);
-%     netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
-    netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
-      'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
-      'learningRate', [2 1 0.05], ...
-      'weightDecay', [0 0]) ;
+
+    switch encoderOpts.pvtype
+      case 'no1x1gsp'
+        netc.layers{end+1} = struct('type', 'bnorm', 'name', sprintf('bn%s', 'last'), ...
+          'weights', {{ones(pvdim, 1, 'single'), zeros(pvdim, 1, 'single'), [zeros(pvdim, 1, 'single'), ones(pvdim, 1, 'single')]}}, ...
+          'learningRate', [2 1 0.05], ...
+          'weightDecay', [0 0]);
+      case 'no1x1gsp-nobn'
+        netc.layers{end+1} = struct('type', 'l2norm', 'name', 'l2_norm');
+    end
+        
   otherwise
     error(['Type not supported', encoderOpts.pvtype]);
 end
@@ -269,4 +281,4 @@ layers = find(cellfun(@(x)strcmp(x.type, type), net.layers)) ;
 function net = simpleRemoveLayersOfType(net, type)
 % -------------------------------------------------------------------------
 layers = simpleFindLayersOfType(net, type) ;
-net.layers(layers) = [] ;
+net.layers(layers) = [];

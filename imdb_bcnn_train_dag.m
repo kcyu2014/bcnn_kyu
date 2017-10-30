@@ -30,7 +30,7 @@ opts.train.cudnn = true ;
 
 opts.inittrain.weightDecay = 0 ;
 opts.inittrain.batchSize = 256 ;
-opts.inittrain.numEpochs = 300 ;
+opts.inittrain.numEpochs = 100 ;
 opts.inittrain.continue = true ;
 
 
@@ -41,7 +41,7 @@ else
 end
 
 opts.inittrain.prefetch = false ;
-opts.inittrain.learningRate = 0.001 ;
+opts.inittrain.learningRate = reshape(repmat([1e-2, 1e-3, 1e-4], 50, 1), 3*50, 1);
 opts.inittrain.expDir = fullfile(opts.expDir, 'init') ;
 
 
@@ -181,6 +181,7 @@ encoderOpts.modelb = [];
 encoderOpts.layerb = 14;
 encoderOpts.shareWeight = false;
 encoderOpts.pvtype = '';
+encoderOpts.pvdim = 2048;
 
 encoderOpts = vl_argparse(encoderOpts, opts.encoders{1}.opts);
 

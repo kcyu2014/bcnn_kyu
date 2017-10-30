@@ -140,7 +140,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
             codeb = squeeze(gather(res(end).x));
             for i=1:numel(batch)
                 code = codeb(:,i);
-                savefast(fullfile(opts.nonftbcnnDir, ['matbpcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
+                savefast(fullfile(opts.nonftbcnnDir, ['bcnn_nonft_', num2str(batch(i), '%05d')]), 'code');
             end
         end
     end
@@ -155,7 +155,7 @@ if(opts.bcnnLRinit && ~opts.fromScratch)
         bcnndb = imdb;
         tempStr = sprintf('%05d\t', train);
         tempStr = textscan(tempStr, '%s', 'delimiter', '\t');
-        bcnndb.images.name = strcat('matbpcnn_nonft_', tempStr{1}');
+        bcnndb.images.name = strcat('bcnn_nonft_', tempStr{1}');
         bcnndb.images.id = bcnndb.images.id(train);
         bcnndb.images.label = bcnndb.images.label(train);
         bcnndb.images.set = bcnndb.images.set(train);
